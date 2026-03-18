@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useSearchParams } from "next/navigation";
@@ -11,6 +11,7 @@ import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+
 
 interface Profile {
     full_name: string | null;
@@ -51,7 +52,7 @@ interface Message {
     is_read: boolean;
 }
 
-export default function MessagesPage() {
+function MessagesContent() {
     const { user } = useUser();
     const searchParams = useSearchParams();
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -357,5 +358,18 @@ export default function MessagesPage() {
             </div>
             <Footer />
         </main>
+    );
+}
+
+export default function MessagesPage() {
+    return (
+        <Suspense fallback={
+            <main className="min-h-screen bg-background flex flex-col items-center justify-center">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="mt-4 text-xs font-black uppercase tracking-widest text-muted-foreground">Loading...</p>
+            </main>
+        }>
+            <MessagesContent />
+        </Suspense>
     );
 }

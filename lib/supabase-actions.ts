@@ -402,7 +402,7 @@ export async function getConversations() {
     if (!data) return [];
 
     // Map data to include unreadCount and lastMessage
-    const convs = data.map((c: Record<string, unknown>) => {
+    const convs = data.map((c: any) => {
         const msgs = Array.isArray(c.last_message) ? c.last_message : [];
         const unreadCount = msgs.filter((m: { is_read: boolean; sender_id: string }) => !m.is_read && m.sender_id !== userId).length;
         const lastMessage = msgs.length > 0 ? [...msgs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] : null;
