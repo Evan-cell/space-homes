@@ -10,7 +10,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import HouseCard from "@/components/HouseCard";
 import DeleteListingButton from "@/components/DeleteListingButton";
-import { getLandlordListings } from "@/lib/supabase-actions";
+import { getLandlordListings, getLandlordStats, getConversations } from "@/lib/supabase-actions";
 
 export default async function DashboardPage() {
     const { userId } = await auth();
@@ -20,25 +20,18 @@ export default async function DashboardPage() {
     const user = await client.users.getUser(userId);
     const role = (user.publicMetadata.role as "tenant" | "landlord") || null;
 
-    // If no role is selected, take them to onboarding
     if (!role) {
         redirect("/onboarding");
     }
 
-    // If tenant, they don't have a dashboard yet, redirect to listings 
-    // (or we can build a tenant dashboard later)
     if (role === "tenant") {
         redirect("/listings");
     }
 
-    // Ensure profile exists in Supabase (fallback sync)
-    if (role) {
-        const { setUserRole: syncRole } = await import("@/lib/clerk-actions");
-        await syncRole(role);
-    }
-
     // Landlord View (Real Content from Supabase)
     const myHouses = await getLandlordListings();
+    const stats = await getLandlordStats();
+    const recentConvs = await getConversations();
 
     return (
         <main className="min-h-screen bg-background transition-colors duration-300">
@@ -67,22 +60,48 @@ export default async function DashboardPage() {
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-                    {[
-                        { label: "Total Listings", val: myHouses.length.toString(), icon: Home, color: "text-blue-500", bg: "bg-blue-500/10" },
-                        { label: "Active Inquiries", val: "48", icon: MessageSquare, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-                        { label: "Total Views", val: "2.4k", icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10" },
-                        { label: "Shortlisted By", val: "156", icon: Users, color: "text-pink-500", bg: "bg-pink-500/10" },
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-card border border-border p-6 rounded-[2rem] flex items-center gap-6 hover:shadow-lg transition-shadow">
-                            <div className={`w-14 h-14 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                                <stat.icon size={28} />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                                <h3 className="text-2xl font-black text-foreground mt-1">{stat.val}</h3>
-                            </div>
+                    <div className="bg-card border border-border p-6 rounded-[2rem] flex items-center gap-6 hover:shadow-lg transition-shadow">
+                        <div className={`w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center`}>
+                            <Home size={28} />
                         </div>
-                    ))}
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Listings</p>
+                            <h3 className="text-2xl font-black text-foreground mt-1">{myHouses.length}</h3>
+                        </div>
+                    </div>
+                    
+                    <Link href="/messages" className="bg-card border border-border p-6 rounded-[2rem] flex items-center gap-6 hover:shadow-lg transition-shadow group">
+                        <div className={`w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all`}>
+                            <MessageSquare size={28} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-emerald-500 transition-colors">Active Enquiries</p>
+                            <h3 className="text-2xl font-black text-foreground mt-1 flex items-center gap-2">
+                                {stats.unreadEnquiries}
+                                {stats.unreadEnquiries > 0 && <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />}
+                            </h3>
+                        </div>
+                    </Link>
+
+                    <div className="bg-card border border-border p-6 rounded-[2rem] flex items-center gap-6 hover:shadow-lg transition-shadow">
+                        <div className={`w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-500 flex items-center justify-center`}>
+                            <TrendingUp size={28} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Views</p>
+                            <h3 className="text-2xl font-black text-foreground mt-1">{stats.views}</h3>
+                        </div>
+                    </div>
+
+                    <div className="bg-card border border-border p-6 rounded-[2rem] flex items-center gap-6 hover:shadow-lg transition-shadow">
+                        <div className={`w-14 h-14 rounded-2xl bg-pink-500/10 text-pink-500 flex items-center justify-center`}>
+                            <Users size={28} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Shortlisted By</p>
+                            <h3 className="text-2xl font-black text-foreground mt-1">{stats.bookmarks}</h3>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid lg:grid-cols-3 gap-12">
@@ -114,10 +133,6 @@ export default async function DashboardPage() {
                                             <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Status</span>
                                             <span className="text-xs font-bold text-emerald-400">Available</span>
                                         </div>
-                                        <div className="flex flex-col text-right">
-                                            <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Inquiries</span>
-                                            <span className="text-xs font-bold">12 New</span>
-                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -126,35 +141,46 @@ export default async function DashboardPage() {
 
                     <div className="space-y-8">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-2xl font-black text-foreground">Recent <span className="text-primary italic">Activity.</span></h3>
+                            <h3 className="text-2xl font-black text-foreground">Recent <span className="text-primary italic">Messages.</span></h3>
                             <Bell size={20} className="text-primary" />
                         </div>
 
                         <div className="space-y-4">
-                            {[
-                                { user: "David M.", action: "asked about water supply", time: "2 mins ago", type: "question" },
-                                { user: "Grace K.", action: "shortlisted your property", time: "45 mins ago", type: "shortlist" },
-                                { user: "Peter O.", action: "booked a viewing", time: "2 hours ago", type: "booking" },
-                                { user: "System", action: "Verification complete", time: "1 day ago", type: "update" },
-                            ].map((act, i) => (
-                                <div key={i} className="bg-card border border-border p-5 rounded-3xl flex gap-4 hover:border-primary/30 transition-colors group cursor-pointer">
-                                    <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                                        {act.type === "question" ? <MessageSquare size={20} /> : <Bell size={20} />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-foreground truncate">
-                                            {act.user} <span className="font-medium text-muted-foreground">{act.action}</span>
-                                        </p>
-                                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1">{act.time}</p>
-                                    </div>
-                                    <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary mt-1" />
+                            {recentConvs.length > 0 ? (
+                                recentConvs.slice(0, 4).map((conv) => (
+                                    <Link 
+                                        key={conv.id} 
+                                        href={`/messages?conversationId=${conv.id}`}
+                                        className="bg-card border border-border p-5 rounded-3xl flex gap-4 hover:border-primary/30 transition-colors group cursor-pointer"
+                                    >
+                                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                                            <MessageSquare size={20} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-foreground truncate">
+                                                {conv.tenant?.full_name} <span className="font-medium text-muted-foreground">sent a message</span>
+                                            </p>
+                                            <p className="text-xs text-muted-foreground truncate italic mt-0.5">"{conv.lastMessage?.content}"</p>
+                                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-2">
+                                                {new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                        {conv.unreadCount > 0 && (
+                                            <div className="w-2 h-2 bg-red-500 rounded-full mt-1" />
+                                        )}
+                                        <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary mt-1" />
+                                    </Link>
+                                ))
+                            ) : (
+                                <div className="bg-card border border-border p-12 rounded-3xl text-center">
+                                    <p className="text-muted-foreground font-bold">No messages yet.</p>
                                 </div>
-                            ))}
+                            )}
                         </div>
 
-                        <button className="w-full py-4 border border-border rounded-2xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted transition-colors">
-                            View All Activity
-                        </button>
+                        <Link href="/messages" className="block w-full text-center py-4 border border-border rounded-2xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted transition-colors">
+                            View Activity Lounge
+                        </Link>
                     </div>
                 </div>
             </div>

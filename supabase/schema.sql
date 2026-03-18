@@ -6,10 +6,19 @@ CREATE TABLE public.profiles (
   role TEXT CHECK (role IN ('tenant', 'landlord')),
   phone TEXT,
   whatsapp TEXT,
+  avatar_url TEXT,
   verified BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure avatar_url exists
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='avatar_url') THEN
+        ALTER TABLE public.profiles ADD COLUMN avatar_url TEXT;
+    END IF;
+END $$;
 
 -- Separate table for property listings
 CREATE TABLE public.listings (
@@ -118,5 +127,100 @@ CREATE POLICY "Public Upload"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'property-images');
 
--- Note: In a production app, you'd want closer integration with Clerk JWT,
--- but for now this enables unblocked development.
+-- Listing Views tracking
+CREATE TABLE IF NOT EXISTS public.listing_views (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE,
+    viewer_id TEXT, -- Clerk user ID
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Bookmarks tracking
+CREATE TABLE IF NOT EXISTS public.bookmarks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL, -- Clerk user ID
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(listing_id, user_id)
+);
+
+-- Conversations table
+CREATE TABLE IF NOT EXISTS public.conversations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id TEXT NOT NULL,
+    landlord_id TEXT NOT NULL,
+    listing_id UUID REFERENCES public.listings(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Ensure foreign keys on conversations
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'conversations_tenant_id_fkey') THEN
+        ALTER TABLE public.conversations ADD CONSTRAINT conversations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.profiles(id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'conversations_landlord_id_fkey') THEN
+        ALTER TABLE public.conversations ADD CONSTRAINT conversations_landlord_id_fkey FOREIGN KEY (landlord_id) REFERENCES public.profiles(id);
+    END IF;
+END $$;
+
+-- Messages table
+CREATE TABLE IF NOT EXISTS public.messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE,
+    sender_id TEXT NOT NULL REFERENCES public.profiles(id),
+    content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add missing columns to listings if they don't exist
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='listings' AND column_name='bedrooms') THEN
+        ALTER TABLE public.listings ADD COLUMN bedrooms INTEGER DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='listings' AND column_name='bathrooms') THEN
+        ALTER TABLE public.listings ADD COLUMN bathrooms INTEGER DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='listings' AND column_name='space_size') THEN
+        ALTER TABLE public.listings ADD COLUMN space_size TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='listings' AND column_name='phone_number') THEN
+        ALTER TABLE public.listings ADD COLUMN phone_number TEXT;
+    END IF;
+END $$;
+
+-- RLS for new tables
+ALTER TABLE public.listing_views ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+-- Policies for new tables
+DROP POLICY IF EXISTS "Anyone can insert views" ON public.listing_views;
+CREATE POLICY "Anyone can insert views" ON public.listing_views FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Users can manage their own bookmarks" ON public.bookmarks;
+CREATE POLICY "Users can manage their own bookmarks" ON public.bookmarks 
+FOR ALL USING (user_id = auth.uid()::text);
+
+-- Policies for Chat
+DROP POLICY IF EXISTS "Users can view their own conversations" ON public.conversations;
+CREATE POLICY "Users can view their own conversations" ON public.conversations
+    FOR SELECT USING (auth.uid()::text = tenant_id OR auth.uid()::text = landlord_id);
+
+DROP POLICY IF EXISTS "Users can view messages in their conversations" ON public.messages;
+CREATE POLICY "Users can view messages in their conversations" ON public.messages
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.conversations 
+            WHERE id = messages.conversation_id 
+            AND (tenant_id = auth.uid()::text OR landlord_id = auth.uid()::text)
+        )
+    );
+
+DROP POLICY IF EXISTS "Users can send messages" ON public.messages;
+CREATE POLICY "Users can send messages" ON public.messages
+    FOR INSERT WITH CHECK (auth.uid()::text = sender_id);

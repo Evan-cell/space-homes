@@ -1,23 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { Search, User, Menu, X, Sparkles } from "lucide-react";
+import { Search, User, Menu, X, Sparkles, MessageSquare } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserButton, Show, SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
+import { getLandlordStats } from "@/lib/supabase-actions";
 
 export default function Navbar() {
     const { user } = useUser();
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 50);
         };
         window.addEventListener("scroll", handleScroll);
+        
+        // Fetch unread count if signed in
+        if (user) {
+            getLandlordStats().then(stats => setUnreadCount(stats.unreadEnquiries));
+            const interval = setInterval(() => {
+                getLandlordStats().then(stats => setUnreadCount(stats.unreadEnquiries));
+            }, 30000); // Poll every 30s
+            return () => {
+                window.removeEventListener("scroll", handleScroll);
+                clearInterval(interval);
+            };
+        }
+        
         return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+    }, [user]);
 
     return (
         <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/80 backdrop-blur-md py-4 px-6 md:px-20 shadow-sm border-b border-border" : "bg-transparent py-6 px-6 md:px-20"}`}>
@@ -58,6 +73,20 @@ export default function Navbar() {
                     <button className="p-2.5 rounded-full hover:bg-accent transition-all shrink-0">
                         <Search className="w-5 h-5 text-foreground" />
                     </button>
+
+                    <Show when="signed-in">
+                        <Link 
+                            href="/messages" 
+                            className="p-2.5 rounded-full hover:bg-accent transition-all shrink-0 relative group"
+                        >
+                            <MessageSquare className="w-5 h-5 text-foreground group-hover:text-primary transition-colors" />
+                            {unreadCount > 0 && (
+                                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-black border-2 border-background animate-in zoom-in duration-300">
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </Link>
+                    </Show>
 
                     <div className="flex items-center gap-2 shrink-0">
                         <ThemeToggle />

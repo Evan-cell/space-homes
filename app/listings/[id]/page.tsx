@@ -12,6 +12,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import DeleteListingButton from "@/components/DeleteListingButton";
+import ListingActions from "@/components/ListingActions";
 
 export default async function ListingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -38,17 +39,17 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                 </Link>
                 <div className="flex items-center gap-3">
                     {isOwner && (
-                        <div className="mr-4">
+                        <div className="mr-2">
                             <DeleteListingButton id={property.id} />
                         </div>
                     )}
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border hover:bg-muted transition-all text-sm font-bold">
+                    <ListingActions 
+                        listingId={property.id} 
+                        landlordId={property.landlord_id} 
+                        isOwner={isOwner} 
+                    />
+                    <button className="flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border hover:bg-muted transition-all text-sm font-bold ml-2">
                         <Share2 size={16} className="text-primary" />
-                        <span>Share</span>
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border hover:bg-muted transition-all text-sm font-bold">
-                        <Heart size={16} className="text-primary" />
-                        <span>Save</span>
                     </button>
                 </div>
             </div>

@@ -27,6 +27,7 @@ export async function setUserRole(role: "tenant" | "landlord") {
             id: userId,
             email: email,
             full_name: fullName,
+            avatar_url: user.imageUrl,
             role: role,
             updated_at: new Date().toISOString(),
         });
