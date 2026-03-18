@@ -79,7 +79,7 @@ export default function Hero() {
                             </div>
 
                             {/* Action Button */}
-                            <Link href="/listings" className="bg-primary text-primary-foreground px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95 group/btn">
+                            <Link href="/sign-in?redirect_url=/listings" className="bg-primary text-primary-foreground px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95 group/btn">
                                 <Search className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
                                 <span>Find Rentals</span>
                             </Link>

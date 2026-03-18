@@ -71,7 +71,11 @@ export default function Navbar() {
                         .map((item) => (
                         <Link
                             key={item}
-                            href={item === "Home" ? "/" : `/${item.toLowerCase()}`}
+                            href={
+                                item === "Home" ? "/" : 
+                                (item === "Listings" && !user) ? "/sign-up?redirect_url=/listings" : 
+                                `/${item.toLowerCase()}`
+                            }
                             className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors relative group"
                         >
                             {item}
@@ -141,7 +145,11 @@ export default function Navbar() {
                             return true;
                         })
                         .map((tab) => (
-                        <Link key={tab} href="#" className="text-lg font-bold text-foreground hover:text-primary transition-colors">
+                        <Link key={tab} href={
+                                tab === "Home" ? "/" : 
+                                (tab === "Listings" && !user) ? "/sign-up?redirect_url=/listings" : 
+                                `/${tab.toLowerCase()}`
+                            } className="text-lg font-bold text-foreground hover:text-primary transition-colors">
                             {tab}
                         </Link>
                     ))}

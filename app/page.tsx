@@ -67,7 +67,7 @@ export default async function Home() {
             </div>
 
             <div className="mt-20 text-center">
-              <Link href="/listings" className="inline-block vibrant-gradient text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-[0_20px_50px_rgba(var(--primary),0.3)] hover:scale-110 active:scale-95 transition-all">
+              <Link href="/sign-in?redirect_url=/listings" className="inline-block vibrant-gradient text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-[0_20px_50px_rgba(var(--primary),0.3)] hover:scale-110 active:scale-95 transition-all">
                 Explore All Rentals
               </Link>
             </div>
