@@ -5,7 +5,8 @@ import { Search, User, Menu, X, Sparkles, MessageSquare } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserButton, Show, SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
-import { getLandlordStats } from "@/lib/supabase-actions";
+import { getUserStats } from "@/lib/supabase-actions";
+import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
     const { user } = useUser();
@@ -19,15 +20,26 @@ export default function Navbar() {
         };
         window.addEventListener("scroll", handleScroll);
         
-        // Fetch unread count if signed in
+        // Initial fetch
         if (user) {
-            getLandlordStats().then(stats => setUnreadCount(stats.unreadEnquiries));
-            const interval = setInterval(() => {
-                getLandlordStats().then(stats => setUnreadCount(stats.unreadEnquiries));
-            }, 30000); // Poll every 30s
+            getUserStats().then(stats => setUnreadCount(stats?.unreadEnquiries || 0));
+            
+            // Real-time subscription for unread count
+            const channel = supabase
+                .channel('navbar_notifications')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'messages' },
+                    () => {
+                        // Re-fetch stats when any message change occurs (new or read)
+                        getUserStats().then(stats => setUnreadCount(stats?.unreadEnquiries || 0));
+                    }
+                )
+                .subscribe();
+
             return () => {
                 window.removeEventListener("scroll", handleScroll);
-                clearInterval(interval);
+                supabase.removeChannel(channel);
             };
         }
         
@@ -76,7 +88,7 @@ export default function Navbar() {
 
                     <Show when="signed-in">
                         <Link 
-                            href="/messages" 
+                            href="/dashboard" 
                             className="p-2.5 rounded-full hover:bg-accent transition-all shrink-0 relative group"
                         >
                             <MessageSquare className="w-5 h-5 text-foreground group-hover:text-primary transition-colors" />

@@ -177,24 +177,26 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                             </div>
                         </div>
 
-                        <div className="space-y-3">
-                            <a 
-                                href={`tel:${property.landlord?.phone?.replace(/\s+/g, '')}`}
-                                className="flex items-center justify-center gap-3 w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95"
-                            >
-                                <Phone size={18} />
-                                Call Landlord
-                            </a>
-                            <a 
-                                href={`https://wa.me/${property.landlord?.whatsapp?.replace(/[^0-9]/g, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-3 w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-green-500/30 active:scale-95"
-                            >
-                                <MessageSquare size={18} />
-                                Chat WhatsApp
-                            </a>
-                        </div>
+                        {!isOwner && (
+                            <div className="space-y-3">
+                                <a 
+                                    href={`tel:${property.landlord?.phone?.replace(/\s+/g, '')}`}
+                                    className="flex items-center justify-center gap-3 w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95"
+                                >
+                                    <Phone size={18} />
+                                    Call Landlord
+                                </a>
+                                <a 
+                                    href={`https://wa.me/${property.landlord?.whatsapp?.replace(/[^0-9]/g, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center gap-3 w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-green-500/30 active:scale-95"
+                                >
+                                    <MessageSquare size={18} />
+                                    Chat WhatsApp
+                                </a>
+                            </div>
+                        )}
 
                         <p className="text-[10px] text-center text-muted-foreground leading-relaxed">
                             Always visit the property in person before making any payments. Report suspicious listings to our help desk.

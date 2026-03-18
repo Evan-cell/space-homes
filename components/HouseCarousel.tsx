@@ -1,13 +1,23 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useCallback } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import HouseCard from "./HouseCard";
 
+interface House {
+    id: string | number;
+    images: string[];
+    title: string;
+    price: string;
+    location: string;
+    type: string;
+    rating?: number;
+}
+
 interface HouseCarouselProps {
-    listings?: any[];
+    listings?: House[];
 }
 
 export default function HouseCarousel({ listings = [] }: HouseCarouselProps) {

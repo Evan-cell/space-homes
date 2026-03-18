@@ -224,3 +224,25 @@ CREATE POLICY "Users can view messages in their conversations" ON public.message
 DROP POLICY IF EXISTS "Users can send messages" ON public.messages;
 CREATE POLICY "Users can send messages" ON public.messages
     FOR INSERT WITH CHECK (auth.uid()::text = sender_id);
+
+-- Enable Realtime for these tables
+DO $$ 
+BEGIN
+  -- Try to add tables to existing publication
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  EXCEPTION WHEN OTHERS THEN 
+    -- Ignore if already added or publication doesn't exist
+  END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+  EXCEPTION WHEN OTHERS THEN 
+    -- Ignore if already added or publication doesn't exist
+  END;
+
+  -- If publication doesn't exist at all, create it
+  IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    CREATE PUBLICATION supabase_realtime FOR TABLE public.messages, public.conversations;
+  END IF;
+END $$;

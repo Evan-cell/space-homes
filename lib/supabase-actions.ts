@@ -4,7 +4,7 @@ import { auth, clerkClient } from "@clerk/nextjs/server";
 import { supabase, getSupabaseAdmin } from "./supabase";
 import { revalidatePath } from "next/cache";
 
-export async function createListing(formData: any) {
+export async function createListing(formData: Record<string, unknown>) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
@@ -40,16 +40,16 @@ export async function createListing(formData: any) {
         .from("listings")
         .insert({
             landlord_id: userId,
-            title: formData.title,
-            price: formData.price,
-            price_value: parseFloat(formData.priceValue),
-            location: formData.location,
-            type: formData.type,
-            description: formData.description,
-            amenities: formData.amenities || [],
-            images: formData.images || [],
-            bedrooms: formData.bedrooms || 1,
-            bathrooms: formData.bathrooms || 1,
+            title: formData.title as string,
+            price: formData.price as string,
+            price_value: parseFloat(formData.priceValue as string),
+            location: formData.location as string,
+            type: formData.type as string,
+            description: formData.description as string,
+            amenities: (formData.amenities as string[]) || [],
+            images: (formData.images as string[]) || [],
+            bedrooms: (formData.bedrooms as number) || 1,
+            bathrooms: (formData.bathrooms as number) || 1,
             space_size: formData.spaceSize ? String(formData.spaceSize) : null,
             phone_number: formData.phoneNumber || null,
             rating: 0,
@@ -228,79 +228,132 @@ export async function isBookmarked(listingId: string) {
     return !!data;
 }
 
-export async function getLandlordStats() {
+export async function getUserStats() {
     const { userId } = await auth();
     if (!userId) return { views: 0, bookmarks: 0, unreadEnquiries: 0 };
 
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const role = user.publicMetadata.role as "tenant" | "landlord";
+    
     const admin = getSupabaseAdmin();
 
-    // 1. Get total views for all landlord's listings
-    const { data: listings } = await admin
-        .from("listings")
-        .select("id")
-        .eq("landlord_id", userId);
-    
-    const listingIds = listings?.map(l => l.id) || [];
+    if (role === "landlord") {
+        const { data: listings } = await admin
+            .from("listings")
+            .select("id")
+            .eq("landlord_id", userId);
+        
+        const listingIds = listings?.map(l => l.id) || [];
 
-    if (listingIds.length === 0) return { views: 0, bookmarks: 0, unreadEnquiries: 0 };
+        if (listingIds.length === 0) return { views: 0, bookmarks: 0, unreadEnquiries: 0 };
 
-    const { count: views } = await admin
-        .from("listing_views")
-        .select("*", { count: 'exact', head: true })
-        .in("listing_id", listingIds);
+        const { count: views } = await admin
+            .from("listing_views")
+            .select("*", { count: 'exact', head: true })
+            .in("listing_id", listingIds);
 
-    // 2. Get total bookmarks
-    const { count: bookmarks } = await admin
-        .from("bookmarks")
-        .select("*", { count: 'exact', head: true })
-        .in("listing_id", listingIds);
+        const { count: bookmarks } = await admin
+            .from("bookmarks")
+            .select("*", { count: 'exact', head: true })
+            .in("listing_id", listingIds);
 
-    // 3. Get unread messages count
-    const { count: unreadEnquiries } = await admin
-        .from("messages")
-        .select("id", { count: 'exact', head: true })
-        .eq("is_read", false)
-        .neq("sender_id", userId)
-        .in("conversation_id", (
-            await admin.from("conversations").select("id").eq("landlord_id", userId)
-        ).data?.map(c => c.id) || []);
+        const { count: unreadEnquiries } = await admin
+            .from("messages")
+            .select("id", { count: 'exact', head: true })
+            .eq("is_read", false)
+            .neq("sender_id", userId)
+            .in("conversation_id", (
+                await admin.from("conversations").select("id").eq("landlord_id", userId)
+            ).data?.map(c => c.id) || []);
 
-    return {
-        views: views || 0,
-        bookmarks: bookmarks || 0,
-        unreadEnquiries: unreadEnquiries || 0
-    };
+        return {
+            views: views || 0,
+            bookmarks: bookmarks || 0,
+            unreadEnquiries: unreadEnquiries || 0
+        };
+    } else {
+        const { count: bookmarks } = await admin
+            .from("bookmarks")
+            .select("*", { count: 'exact', head: true })
+            .eq("user_id", userId);
+
+        const { count: unreadEnquiries } = await admin
+            .from("messages")
+            .select("id", { count: 'exact', head: true })
+            .eq("is_read", false)
+            .neq("sender_id", userId)
+            .in("conversation_id", (
+                await admin.from("conversations").select("id").eq("tenant_id", userId)
+            ).data?.map(c => c.id) || []);
+
+        return {
+            views: 0,
+            bookmarks: bookmarks || 0,
+            unreadEnquiries: unreadEnquiries || 0
+        };
+    }
 }
 
 export async function sendMessage(receiverId: string, content: string, listingId?: string) {
+    console.log("SEND_MESSAGE_START", { receiverId, listingId });
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
     const admin = getSupabaseAdmin();
 
+    // Ensure sender profile exists
+    console.log("STEP 1: Checking profile...");
+    const { data: profile } = await admin.from("profiles").select("id").eq("id", userId).single();
+    if (!profile) {
+        console.log("STEP 2: Syncing profile...");
+        const client = await clerkClient();
+        const user = await client.users.getUser(userId);
+        await admin.from("profiles").upsert({
+            id: userId,
+            email: user.emailAddresses[0]?.emailAddress,
+            full_name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+            avatar_url: user.imageUrl,
+            role: (user.publicMetadata.role as string) || "tenant",
+            updated_at: new Date().toISOString()
+        });
+    }
+
     // Find or create conversation
-    let { data: conv } = await admin
+    console.log("STEP 3: Finding/Creating conversation...");
+    const { data: foundConv } = await admin
         .from("conversations")
         .select("id")
         .or(`and(tenant_id.eq.${userId},landlord_id.eq.${receiverId}),and(tenant_id.eq.${receiverId},landlord_id.eq.${userId})`)
         .single();
 
+    let conv = foundConv;
+
     if (!conv) {
-        const { data: newConv } = await admin
+        console.log("STEP 4: Creating new conversation...");
+        const { data: newConv, error: createError } = await admin
             .from("conversations")
             .insert({
-                tenant_id: userId, // Assuming first messager is tenant or we determine by role
+                tenant_id: userId,
                 landlord_id: receiverId,
                 listing_id: listingId
             })
             .select()
             .single();
+        
+        if (createError) {
+            console.error("Error creating conversation:", JSON.stringify(createError, null, 2));
+        }
         conv = newConv;
     }
 
-    if (!conv) throw new Error("Failed to create conversation");
+    if (!conv) {
+        console.error("FAILED TO CREATE CONVERSATION. Params:", { userId, receiverId, listingId });
+        throw new Error("Failed to create conversation");
+    }
 
-    const { error } = await admin
+    console.log("STEP 5: Sending message...");
+    const { error: msgError } = await admin
         .from("messages")
         .insert({
             conversation_id: conv.id,
@@ -308,11 +361,15 @@ export async function sendMessage(receiverId: string, content: string, listingId
             content
         });
 
-    if (error) throw error;
+    if (msgError) {
+        console.error("Error sending message:", JSON.stringify(msgError, null, 2));
+        throw msgError;
+    }
 
-    // Update conversation updated_at
+    console.log("STEP 6: Updating updated_at...");
     await admin.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conv.id);
 
+    console.log("SEND_MESSAGE_COMPLETE", conv.id);
     revalidatePath("/messages");
     return { success: true, conversationId: conv.id };
 }
@@ -344,11 +401,40 @@ export async function getConversations() {
 
     if (!data) return [];
 
-    return data.map(c => ({
-        ...c,
-        unreadCount: Array.isArray(c.last_message) ? c.last_message.filter((m: any) => !m.is_read && m.sender_id !== userId).length : 0,
-        lastMessage: Array.isArray(c.last_message) && c.last_message.length > 0 ? c.last_message[c.last_message.length - 1] : null
-    }));
+    // Map data to include unreadCount and lastMessage
+    const convs = data.map((c: Record<string, unknown>) => {
+        const msgs = Array.isArray(c.last_message) ? c.last_message : [];
+        const unreadCount = msgs.filter((m: { is_read: boolean; sender_id: string }) => !m.is_read && m.sender_id !== userId).length;
+        const lastMessage = msgs.length > 0 ? [...msgs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] : null;
+
+        return {
+            ...c,
+            unreadCount,
+            lastMessage
+        };
+    });
+
+    return convs;
+}
+
+export async function markMessagesAsRead(conversationId: string) {
+    console.log("MARKING AS READ", conversationId);
+    const { userId } = await auth();
+    if (!userId) return;
+
+    const { error } = await getSupabaseAdmin()
+        .from("messages")
+        .update({ is_read: true })
+        .eq("conversation_id", conversationId)
+        .neq("sender_id", userId)
+        .eq("is_read", false);
+
+    if (error) {
+        console.error("Error marking messages as read:", error);
+    }
+    
+    revalidatePath("/messages");
+    revalidatePath("/dashboard");
 }
 
 export async function getMessages(conversationId: string) {
@@ -371,4 +457,25 @@ export async function getMessages(conversationId: string) {
         .neq("sender_id", userId);
 
     return data;
+}
+
+export async function getTenantSavedListings() {
+    const { userId } = await auth();
+    if (!userId) return [];
+
+    const admin = getSupabaseAdmin();
+    const { data: bookmarks } = await admin
+        .from("bookmarks")
+        .select("listing_id")
+        .eq("user_id", userId);
+
+    const listingIds = bookmarks?.map(b => b.listing_id) || [];
+    if (listingIds.length === 0) return [];
+
+    const { data: listings } = await admin
+        .from("listings")
+        .select("*")
+        .in("id", listingIds);
+
+    return listings || [];
 }
