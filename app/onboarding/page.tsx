@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { User, Home, ShieldCheck, ArrowRight, Sparkles } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -20,11 +21,12 @@ export default function OnboardingPage() {
         try {
             await setUserRole(role); 
             
-            // Redirect based on role
+            // Redirect based on role using window.location.href for hard refresh
+            // this ensures session/middleware sync
             if (role === "landlord") {
-                router.push("/dashboard");
+                window.location.href = "/dashboard";
             } else {
-                router.push("/listings");
+                window.location.href = "/listings";
             }
         } catch (error) {
             console.error("Failed to set role:", error);
@@ -33,13 +35,54 @@ export default function OnboardingPage() {
         }
     };
 
-    if (!isLoaded) return null;
+    useEffect(() => {
+        // Automatic redirect if role already exists and we're not currently submitting a new one
+        if (isLoaded && user?.publicMetadata?.role && !loading) {
+            const role = user.publicMetadata.role as string;
+            const target = role === "landlord" ? "/dashboard" : "/listings";
+            
+            // Check if we're already on that page or navigating to it to avoid loops
+            if (window.location.pathname !== target) {
+                window.location.href = target;
+            }
+        }
+    }, [isLoaded, user, loading]);
+
+    if (!isLoaded) {
+        return (
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-sm font-bold text-muted-foreground animate-pulse uppercase tracking-[0.2em]">Initialising Space...</p>
+                <p className="mt-4 text-[10px] text-muted-foreground">Taking too long? Try <button onClick={() => window.location.reload()} className="underline text-primary">reloading</button></p>
+            </div>
+        );
+    }
+
+    // If user already has a role, they are being redirected
+    if (user?.publicMetadata?.role && !loading) {
+        const role = user.publicMetadata.role as string;
+        const target = role === "landlord" ? "/dashboard" : "/listings";
+        return (
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-12 h-12 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-sm font-bold text-muted-foreground animate-pulse uppercase tracking-[0.2em]">Redirecting to {role} portal...</p>
+                <div className="flex flex-col gap-4 mt-8">
+                    <Link href={target} className="text-sm font-black text-primary hover:underline">
+                        Click here if not redirected automatically
+                    </Link>
+                    <Link href="/" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">
+                        Back to Homepage
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <main className="min-h-screen bg-background selection:bg-primary selection:text-white">
             <Navbar />
             
-            <div className="pt-32 pb-20 container mx-auto px-6 flex flex-col items-center">
+            <div className="pt-32 pb-20 container mx-auto px-6 flex flex-col items-center animate-fade-in">
                 <div className="max-w-2xl w-full text-center space-y-8">
                     <div className="space-y-4">
                         <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-[0.3em] text-xs">

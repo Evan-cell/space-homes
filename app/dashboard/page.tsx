@@ -1,24 +1,44 @@
-"use client";
-
-import { useUser } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { 
     Plus, Home, MessageSquare, Bell, 
-    TrendingUp, Users, Settings, LogOut,
-    Search, Filter, MoreVertical, ExternalLink
+    TrendingUp, Users, Settings, MoreVertical,
+    Search, Filter, ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { PROPERTIES } from "@/lib/data";
 import HouseCard from "@/components/HouseCard";
+import DeleteListingButton from "@/components/DeleteListingButton";
+import { getLandlordListings } from "@/lib/supabase-actions";
 
-export default function LandlordDashboard() {
-    const { user, isLoaded } = useUser();
+export default async function DashboardPage() {
+    const { userId } = await auth();
+    if (!userId) redirect("/sign-in");
 
-    if (!isLoaded) return null;
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const role = (user.publicMetadata.role as "tenant" | "landlord") || null;
 
-    // Simulate landlord's houses (filtering by a mock landlord name)
-    const myHouses = PROPERTIES.slice(0, 3); // For demo purposes, showing first 3
+    // If no role is selected, take them to onboarding
+    if (!role) {
+        redirect("/onboarding");
+    }
+
+    // If tenant, they don't have a dashboard yet, redirect to listings 
+    // (or we can build a tenant dashboard later)
+    if (role === "tenant") {
+        redirect("/listings");
+    }
+
+    // Ensure profile exists in Supabase (fallback sync)
+    if (role) {
+        const { setUserRole: syncRole } = await import("@/lib/clerk-actions");
+        await syncRole(role);
+    }
+
+    // Landlord View (Real Content from Supabase)
+    const myHouses = await getLandlordListings();
 
     return (
         <main className="min-h-screen bg-background transition-colors duration-300">
@@ -33,7 +53,7 @@ export default function LandlordDashboard() {
                             <span>Landlord Portal</span>
                         </div>
                         <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight">
-                            Welcome Back, <span className="text-primary italic">{user?.firstName || "Landlord"}</span>
+                            Welcome Back, <span className="text-primary italic">{user.firstName || "Landlord"}</span>
                         </h1>
                     </div>
                     <Link 
@@ -48,7 +68,7 @@ export default function LandlordDashboard() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
                     {[
-                        { label: "Total Listings", val: "12", icon: Home, color: "text-blue-500", bg: "bg-blue-500/10" },
+                        { label: "Total Listings", val: myHouses.length.toString(), icon: Home, color: "text-blue-500", bg: "bg-blue-500/10" },
                         { label: "Active Inquiries", val: "48", icon: MessageSquare, color: "text-emerald-500", bg: "bg-emerald-500/10" },
                         { label: "Total Views", val: "2.4k", icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10" },
                         { label: "Shortlisted By", val: "156", icon: Users, color: "text-pink-500", bg: "bg-pink-500/10" },
@@ -66,7 +86,6 @@ export default function LandlordDashboard() {
                 </div>
 
                 <div className="grid lg:grid-cols-3 gap-12">
-                    {/* Listings Table Selection */}
                     <div className="lg:col-span-2 space-y-8">
                         <div className="flex items-center justify-between">
                             <h3 className="text-2xl font-black text-foreground">Your <span className="text-primary italic">Listings.</span></h3>
@@ -81,16 +100,14 @@ export default function LandlordDashboard() {
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-8">
-                            {myHouses.map((house) => (
+                            {myHouses.map((house: any) => (
                                 <div key={house.id} className="relative group">
                                     <HouseCard {...house} />
-                                    <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-100 transition-opacity">
                                         <button className="p-2 rounded-xl bg-white/90 backdrop-blur-md text-zinc-900 border border-zinc-200 hover:bg-white transition-all shadow-xl">
                                             <Settings size={16} />
                                         </button>
-                                        <button className="p-2 rounded-xl bg-white/90 backdrop-blur-md text-zinc-900 border border-zinc-200 hover:bg-white transition-all shadow-xl">
-                                            <MoreVertical size={16} />
-                                        </button>
+                                        <DeleteListingButton id={house.id} />
                                     </div>
                                     <div className="absolute bottom-4 left-4 right-4 p-4 rounded-2xl bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-between text-white opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-4 group-hover:translate-y-0 duration-300">
                                         <div className="flex flex-col">
@@ -107,7 +124,6 @@ export default function LandlordDashboard() {
                         </div>
                     </div>
 
-                    {/* Notifications/Questions Sidebar */}
                     <div className="space-y-8">
                         <div className="flex items-center justify-between">
                             <h3 className="text-2xl font-black text-foreground">Recent <span className="text-primary italic">Activity.</span></h3>
@@ -146,23 +162,4 @@ export default function LandlordDashboard() {
             <Footer />
         </main>
     );
-}
-
-function ChevronRight({ className, size }: { className?: string; size?: number }) {
-    return (
-        <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            width={size || 24} 
-            height={size || 24} 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            className={className}
-        >
-            <path d="m9 18 6-6-6-6" />
-        </svg>
-    )
 }

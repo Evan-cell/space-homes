@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Star, MapPin } from "lucide-react";
 
 interface HouseCardProps {
-    id: number;
+    id: string | number;
     images: string[];
     title: string;
     price: string;
@@ -23,6 +23,7 @@ export default function HouseCard({ id, images, title, price, location, type, ra
                     src={images[0]}
                     alt={title}
                     fill
+                    unoptimized
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
 

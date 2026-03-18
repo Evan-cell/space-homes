@@ -1,32 +1,28 @@
-"use client"
-
-import { use } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { PROPERTIES } from "@/lib/data"
-import Navbar from "@/components/Navbar"
-import Footer from "@/components/Footer"
+import { getListingById } from "@/lib/supabase-actions";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import Image from "next/image";
 import { 
-    Star, MapPin, ChevronLeft, Share2, Heart, 
-    Wifi, Car, Tv, Droplets, ShieldCheck, 
-    Phone, MessageSquare, CheckCircle2,
-    Calendar, ArrowLeft
-} from "lucide-react"
+    Star, MapPin, Share2, Heart, 
+    ShieldCheck, Phone, MessageSquare, 
+    CheckCircle2, ArrowLeft, BedDouble, 
+    Bath, Ruler, Shield
+} from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
+import DeleteListingButton from "@/components/DeleteListingButton";
 
-export default function PropertyDetails({ params }: { params: Promise<{ id: string }> }) {
-    const resolvedParams = use(params)
-    const property = PROPERTIES.find(p => p.id === parseInt(resolvedParams.id))
+export default async function ListingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const property = await getListingById(id);
 
     if (!property) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-                <div className="text-center">
-                    <h1 className="text-4xl font-black mb-4">Property Not Found</h1>
-                    <Link href="/listings" className="text-primary font-bold hover:underline">Back to listings</Link>
-                </div>
-            </div>
-        )
+        notFound();
     }
+
+    const { userId } = await auth();
+    const isOwner = userId === property.landlord_id;
 
     return (
         <main className="min-h-screen bg-background transition-colors duration-300">
@@ -41,6 +37,11 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
                     <span className="text-sm font-bold">Back to Search</span>
                 </Link>
                 <div className="flex items-center gap-3">
+                    {isOwner && (
+                        <div className="mr-4">
+                            <DeleteListingButton id={property.id} />
+                        </div>
+                    )}
                     <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border hover:bg-muted transition-all text-sm font-bold">
                         <Share2 size={16} className="text-primary" />
                         <span>Share</span>
@@ -54,37 +55,38 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
 
             {/* Image Gallery Hub */}
             <div className="container mx-auto px-6 mb-12">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[500px]">
-                    <div className="md:col-span-2 relative overflow-hidden rounded-3xl group">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[300px] md:h-[500px]">
+                    <div className="md:col-span-2 row-span-2 relative overflow-hidden rounded-3xl group">
                         <Image 
                             src={property.images[0]} 
                             alt={property.title} 
                             fill 
+                            unoptimized
                             className="object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                         <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black/60 to-transparent">
                             <div className="flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1 rounded-full border border-primary/30 w-fit mb-3">
                                 <Star size={12} className="text-primary fill-primary" />
-                                <span className="text-[10px] font-black text-white uppercase">{property.rating} Highly Rated</span>
+                                <span className="text-[10px] font-black text-white uppercase">{property.rating || 4.9} Highly Rated</span>
                             </div>
                         </div>
                     </div>
-                    <div className="hidden md:grid grid-rows-2 gap-4">
-                        <div className="relative overflow-hidden rounded-3xl">
-                            <Image src={property.images[1]} alt="Gallery 2" fill className="object-cover" />
+                    {property.images.slice(1, 4).map((img: string, i: number) => (
+                        <div key={i} className="relative overflow-hidden rounded-3xl group">
+                            <Image 
+                                src={img} 
+                                alt={`${property.title} ${i + 2}`} 
+                                fill 
+                                unoptimized
+                                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
                         </div>
-                        <div className="relative overflow-hidden rounded-3xl">
-                            <Image src={property.images[2]} alt="Gallery 3" fill className="object-cover" />
+                    ))}
+                    {property.images.length < 4 && (
+                        <div className="hidden md:block relative overflow-hidden rounded-3xl bg-muted/30 border-2 border-dashed border-border flex items-center justify-center">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">More photos coming soon</p>
                         </div>
-                    </div>
-                    <div className="hidden md:block relative overflow-hidden rounded-3xl bg-muted group">
-                        <Image src={property.images[0]} alt="Gallery 4" fill className="object-cover blur-sm opacity-50" />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <button className="bg-white text-black px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl">
-                                View 12+ Photos
-                            </button>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
@@ -103,10 +105,28 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
                         <h1 className="text-4xl md:text-5xl font-black text-foreground leading-[1.1]">{property.title}</h1>
                     </div>
 
+                    {/* Features Row */}
+                    <div className="flex flex-wrap gap-8 items-center border-b border-border pb-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-primary"><BedDouble size={24} /></div>
+                            <div><p className="text-[10px] font-black uppercase text-muted-foreground">Bedrooms</p><p className="font-bold">{property.bedrooms || 1} {property.bedrooms === 1 ? 'Room' : 'Rooms'}</p></div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-primary"><Bath size={24} /></div>
+                            <div><p className="text-[10px] font-black uppercase text-muted-foreground">Bathrooms</p><p className="font-bold">{property.bathrooms || 1} {property.bathrooms === 1 ? 'Unit' : 'Units'}</p></div>
+                        </div>
+                        {property.spaceSize && (
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-primary"><Ruler size={24} /></div>
+                                <div><p className="text-[10px] font-black uppercase text-muted-foreground">Space</p><p className="font-bold">{property.spaceSize} sqft</p></div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Description */}
                     <div className="space-y-4">
                         <h3 className="text-xl font-black text-foreground">Property <span className="text-primary italic">Description.</span></h3>
-                        <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl">
+                        <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl whitespace-pre-wrap">
                             {property.description}
                         </p>
                     </div>
@@ -115,7 +135,7 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
                     <div className="space-y-8">
                         <h3 className="text-xl font-black text-foreground">Premium <span className="text-primary italic">Amenities.</span></h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                            {property.amenities.map((amenity, idx) => (
+                            {property.amenities?.map((amenity: string, idx: number) => (
                                 <div key={idx} className="flex items-center gap-4 bg-muted/30 p-4 rounded-2xl border border-border/50 group hover:bg-muted transition-colors">
                                     <div className="w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                                         <CheckCircle2 size={20} />
@@ -123,20 +143,6 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
                                     <span className="font-bold text-foreground text-sm">{amenity}</span>
                                 </div>
                             ))}
-                        </div>
-                    </div>
-
-                    {/* Location/Map Placeholder */}
-                    <div className="space-y-4">
-                        <h3 className="text-xl font-black text-foreground">Prime <span className="text-primary italic">Location.</span></h3>
-                        <div className="relative h-[300px] w-full bg-muted rounded-3xl border border-border overflow-hidden group">
-                           <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 dark:bg-zinc-900/50">
-                                <div className="text-center group-hover:scale-105 transition-transform">
-                                    <MapPin size={48} className="mx-auto text-primary mb-4" />
-                                    <p className="text-muted-foreground font-bold">Map integration coming soon.</p>
-                                    <p className="text-zinc-400 text-xs mt-1">Exact coordinates: {property.location}</p>
-                                </div>
-                           </div>
                         </div>
                     </div>
                 </div>
@@ -157,27 +163,29 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
                         {/* Landlord Card */}
                         <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/20 border border-border/30">
                             <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-black text-lg">
-                                {property.landlord.name[0]}
+                                {property.landlord?.name?.[0] || "L"}
                             </div>
                             <div>
-                                <h4 className="font-black text-foreground">{property.landlord.name}</h4>
+                                <h4 className="font-black text-foreground">{property.landlord?.name}</h4>
                                 <div className="flex items-center gap-1">
                                     <ShieldCheck size={12} className="text-secondary" />
-                                    <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Verified Landlord</span>
+                                    <span className="text-[10px] font-black text-secondary uppercase tracking-widest">
+                                        {property.landlord?.verified ? "Verified Landlord" : "Registered Landlord"}
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             <a 
-                                href={`tel:${property.landlord.phone}`}
+                                href={`tel:${property.landlord?.phone?.replace(/\s+/g, '')}`}
                                 className="flex items-center justify-center gap-3 w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95"
                             >
                                 <Phone size={18} />
                                 Call Landlord
                             </a>
                             <a 
-                                href={`https://wa.me/${property.landlord.whatsapp.replace(/\s+/g, '')}`}
+                                href={`https://wa.me/${property.landlord?.whatsapp?.replace(/[^0-9]/g, '')}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center justify-center gap-3 w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-green-500/30 active:scale-95"
@@ -196,5 +204,5 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
 
             <Footer />
         </main>
-    )
+    );
 }

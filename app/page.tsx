@@ -4,9 +4,31 @@ import HouseCarousel from "@/components/HouseCarousel";
 import Footer from "@/components/Footer";
 import HouseCard from "@/components/HouseCard";
 import Link from "next/link";
-import { PROPERTIES } from "@/lib/data";
+import { getListings } from "@/lib/supabase-actions";
+import { auth, clerkClient } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+export default async function Home() {
+  const { userId } = await auth();
+  
+  // Fetch real listings
+  const listings = await getListings();
+  const featuredListings = listings.slice(0, 4);
+  
+  if (userId) {
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const role = user.publicMetadata.role;
+
+    if (role === "landlord") {
+        redirect("/dashboard");
+    } else if (role === "tenant") {
+        redirect("/listings");
+    } else {
+        redirect("/onboarding");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-white">
       <Navbar />
@@ -14,7 +36,7 @@ export default function Home() {
       <main>
         <Hero />
 
-        <HouseCarousel />
+        <HouseCarousel listings={listings} />
 
         {/* Featured Section */}
         <section className="py-32 bg-background transition-colors duration-300">
@@ -34,14 +56,19 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {PROPERTIES.slice(0, 4).map((property) => (
+              {featuredListings.map((property) => (
                 <HouseCard key={property.id} {...property} />
               ))}
+              {featuredListings.length === 0 && (
+                <div className="col-span-full py-20 text-center text-muted-foreground font-bold border-2 border-dashed border-border rounded-3xl">
+                  New listings coming soon!
+                </div>
+              )}
             </div>
 
             <div className="mt-20 text-center">
               <Link href="/listings" className="inline-block vibrant-gradient text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-[0_20px_50px_rgba(var(--primary),0.3)] hover:scale-110 active:scale-95 transition-all">
-                Explore All 500+ Houses
+                Explore All Rentals
               </Link>
             </div>
           </div>

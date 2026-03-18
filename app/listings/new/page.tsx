@@ -10,6 +10,9 @@ import {
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { createListing } from "@/lib/supabase-actions";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export default function NewListingPage() {
     const router = useRouter();
@@ -24,7 +27,48 @@ export default function NewListingPage() {
         type: "Bedsitter",
         description: "",
         amenities: [] as string[],
+        bedrooms: 1,
+        bathrooms: 1,
+        spaceSize: "",
+        phoneNumber: "",
     });
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [uploadingImages, setUploadingImages] = useState(false);
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setImageFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+        }
+    };
+
+    const uploadImages = async (): Promise<string[]> => {
+        const urls: string[] = [];
+        setUploadingImages(true);
+
+        for (const file of imageFiles) {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+            const filePath = `listings/${fileName}`;
+
+            const { data, error } = await supabase.storage
+                .from('property-images')
+                .upload(filePath, file);
+
+            if (error) {
+                console.error("Upload error:", error);
+                continue;
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('property-images')
+                .getPublicUrl(filePath);
+
+            urls.push(publicUrl);
+        }
+
+        setUploadingImages(false);
+        return urls;
+    };
 
     const amenitiesOptions = [
         "WiFi", "Parking", "Security 24/7", 
@@ -45,11 +89,30 @@ export default function NewListingPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate API call
-        setTimeout(() => {
+
+        try {
+            // 1. Upload Images
+            const uploadedUrls = await uploadImages();
+            
+            // 2. Create Listing
+            const result = await createListing({
+                ...formData,
+                priceValue: formData.price.replace(/,/g, ''),
+                images: uploadedUrls.length > 0 ? uploadedUrls : [
+                    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1000"
+                ] 
+            });
+
+            if (result.success) {
+                toast.success("Listing published successfully!");
+                router.push("/dashboard");
+            }
+        } catch (error) {
+            console.error("Failed to create listing:", error);
+            toast.error("Failed to publish listing. Please try again.");
+        } finally {
             setLoading(false);
-            router.push("/dashboard");
-        }, 2000);
+        }
     };
 
     return (
@@ -134,12 +197,69 @@ export default function NewListingPage() {
                                 <select 
                                     className="w-full bg-muted/30 border border-border px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground appearance-none cursor-pointer"
                                     value={formData.type}
-                                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setFormData(prev => ({
+                                            ...prev, 
+                                            type: val,
+                                            // Auto-set rooms for small units
+                                            ...( (val === "Bedsitter" || val === "Single Room") ? { bedrooms: 1, bathrooms: 1 } : {} )
+                                        }));
+                                    }}
                                 >
                                     {["Bedsitter", "Studio", "1 Bedroom", "2+ Bedrooms", "Single Room"].map(t => (
                                         <option key={t} value={t}>{t}</option>
                                     ))}
                                 </select>
+                            </div>
+
+                            {/* Conditional Rooms & Bathrooms */}
+                            {!(formData.type === "Bedsitter" || formData.type === "Single Room") && (
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">No. of Bedrooms</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            className="w-full bg-muted/30 border border-border px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground"
+                                            value={formData.bedrooms}
+                                            onChange={(e) => setFormData({...formData, bedrooms: parseInt(e.target.value)})}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">No. of Bathrooms</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            className="w-full bg-muted/30 border border-border px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground"
+                                            value={formData.bathrooms}
+                                            onChange={(e) => setFormData({...formData, bathrooms: parseInt(e.target.value)})}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Space size (sqft)</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="450"
+                                    className="w-full bg-muted/30 border border-border px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground"
+                                    value={formData.spaceSize}
+                                    onChange={(e) => setFormData({...formData, spaceSize: e.target.value})}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Direct Contact No. (WhatsApp/Call)</label>
+                                <input 
+                                    type="tel" 
+                                    placeholder="e.g. +254 712 345 678"
+                                    required
+                                    className="w-full bg-muted/30 border border-border px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground"
+                                    value={formData.phoneNumber}
+                                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                                />
                             </div>
                         </div>
 
@@ -193,19 +313,52 @@ export default function NewListingPage() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="aspect-video rounded-[2rem] border-2 border-dashed border-border flex flex-col items-center justify-center gap-4 p-8 group hover:border-primary/50 cursor-pointer bg-muted/10 transition-colors">
-                                <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <Plus size={32} />
-                                </div>
-                                <div className="text-center">
-                                    <p className="font-black text-foreground uppercase tracking-widest text-xs">Upload Clear Photos</p>
-                                    <p className="text-[10px] text-muted-foreground font-medium mt-1">PNG, JPG up to 10MB</p>
-                                </div>
-                                <input type="file" className="hidden" multiple />
-                            </div>
+                            <label className="aspect-video rounded-[2rem] border-2 border-dashed border-border flex flex-col items-center justify-center gap-4 p-8 group hover:border-primary/50 cursor-pointer bg-muted/10 transition-colors relative overflow-hidden">
+                                {uploadingImages ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-primary">Uploading...</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Plus size={32} />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="font-black text-foreground uppercase tracking-widest text-xs">Upload Clear Photos</p>
+                                            <p className="text-[10px] text-muted-foreground font-medium mt-1">Select one or more images</p>
+                                        </div>
+                                    </>
+                                )}
+                                <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    multiple 
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    disabled={uploadingImages}
+                                />
+                            </label>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="aspect-square bg-muted/40 rounded-3xl border border-border animate-pulse" />
-                                <div className="aspect-square bg-muted/40 rounded-3xl border border-border animate-pulse" />
+                                {imageFiles.slice(0, 4).map((file, i) => (
+                                    <div key={i} className="aspect-square bg-muted/40 rounded-3xl border border-border relative overflow-hidden group">
+                                        <img 
+                                            src={URL.createObjectURL(file)} 
+                                            alt="Preview" 
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => setImageFiles(prev => prev.filter((_, idx) => idx !== i))}
+                                            className="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                ))}
+                                {imageFiles.length < 4 && Array.from({ length: 4 - imageFiles.length }).map((_, i) => (
+                                    <div key={i} className="aspect-square bg-muted/10 rounded-3xl border border-dashed border-border/50" />
+                                ))}
                             </div>
                         </div>
                     </div>

@@ -1,26 +1,59 @@
-"use client"
+"use client";
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useUser, Show } from "@clerk/nextjs"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import HouseCard from "@/components/HouseCard"
 import { PROPERTIES } from "@/lib/data"
-import { Search, MapPin, House, Banknote, SlidersHorizontal, LayoutGrid, List } from "lucide-react"
+import { getListings } from "@/lib/supabase-actions"
+import { Search, MapPin, House, Banknote, SlidersHorizontal, LayoutGrid, List, Sparkles } from "lucide-react"
+import Link from "next/link"
 
 export default function ListingsPage() {
+    const { user, isLoaded } = useUser()
+    const [listings, setListings] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
     const [propertyType, setPropertyType] = useState("All")
-    const [maxPrice, setMaxPrice] = useState(30000)
+    const [maxPrice, setMaxPrice] = useState(50000)
+
+    useEffect(() => {
+        async function loadListings() {
+            try {
+                const data = await getListings()
+                console.log("Listings loaded:", data)
+                setListings(data)
+            } catch (error) {
+                console.error("Failed to load listings:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+        loadListings()
+    }, [])
+
+    const role = user?.publicMetadata?.role as string | undefined
+    const isLandlord = role === "landlord"
+
+    // If landlord, they shouldn't be here, redirect to dashboard
+    if (isLandlord && isLoaded) {
+        window.location.href = "/dashboard";
+        return null;
+    }
 
     const filteredProperties = useMemo(() => {
-        return PROPERTIES.filter(p => {
+        // Only use real listings from Supabase
+        const baseProperties = listings
+        
+        return baseProperties.filter(p => {
             const matchesSearch = p.location.toLowerCase().includes(searchQuery.toLowerCase()) || 
                                  p.title.toLowerCase().includes(searchQuery.toLowerCase())
             const matchesType = propertyType === "All" || p.type === propertyType
             const matchesPrice = p.priceValue <= maxPrice
             return matchesSearch && matchesType && matchesPrice
         })
-    }, [searchQuery, propertyType, maxPrice])
+    }, [listings, searchQuery, propertyType, maxPrice])
 
     return (
         <main className="min-h-screen bg-background transition-colors duration-300">
@@ -30,15 +63,30 @@ export default function ListingsPage() {
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-12">
                     <div className="flex flex-col gap-2">
-                        <span className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">Explore Nairobi</span>
+                        <span className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+                            {isLandlord ? "Your Portfolio" : "Explore Nairobi"}
+                        </span>
                         <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight">
-                            Available <span className="text-primary italic">Rentals.</span>
+                            {isLandlord ? "Manage Your" : "Available"} <span className="text-primary italic">{isLandlord ? "Listings." : "Rentals."}</span>
                         </h1>
                     </div>
-                    <div className="flex items-center gap-4 bg-muted p-1 rounded-xl border border-border">
-                        <button className="p-2 rounded-lg bg-card text-primary shadow-sm"><LayoutGrid size={18} /></button>
-                        <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground"><List size={18} /></button>
-                    </div>
+                    {isLandlord && (
+                        <Link 
+                            href="/dashboard" 
+                            className="bg-card border border-border px-6 py-3 rounded-2xl flex items-center gap-2 group hover:border-primary transition-all shadow-xl shadow-primary/5"
+                        >
+                            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                                <Sparkles size={16} />
+                            </div>
+                            <span className="text-sm font-bold text-foreground group-hover:text-primary">Back to Dashboard</span>
+                        </Link>
+                    )}
+                    {!isLandlord && (
+                        <div className="flex items-center gap-4 bg-muted p-1 rounded-xl border border-border">
+                            <button className="p-2 rounded-lg bg-card text-primary shadow-sm"><LayoutGrid size={18} /></button>
+                            <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground"><List size={18} /></button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Search & Filter Bar */}

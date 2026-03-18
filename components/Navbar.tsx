@@ -4,9 +4,10 @@ import Link from "next/link";
 import { Search, User, Menu, X, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "./ThemeToggle";
-import { UserButton, Show, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { UserButton, Show, SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
 
 export default function Navbar() {
+    const { user } = useUser();
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
 
@@ -33,7 +34,14 @@ export default function Navbar() {
 
                 {/* Center Links */}
                 <div className="hidden md:flex items-center gap-8">
-                    {["Home", "Listings", "About", "Contact"].map((item) => (
+                    {["Home", "Listings", "About", "Contact"]
+                        .filter(item => {
+                            if (item === "Listings") {
+                                return user?.publicMetadata?.role !== "landlord";
+                            }
+                            return true;
+                        })
+                        .map((item) => (
                         <Link
                             key={item}
                             href={item === "Home" ? "/" : `/${item.toLowerCase()}`}
@@ -66,7 +74,7 @@ export default function Navbar() {
                                 href="/dashboard" 
                                 className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors px-4 py-2 rounded-xl bg-card border border-border"
                             >
-                                Dashboard
+                                {user?.publicMetadata?.role === "landlord" ? "Landlord Dashboard" : "Dashboard"}
                             </Link>
                             <UserButton />
                         </Show>
@@ -84,7 +92,14 @@ export default function Navbar() {
             {/* Mobile Menu */}
             {isOpen && (
                 <div className="absolute top-20 left-4 right-4 bg-card border border-border rounded-3xl p-8 flex flex-col gap-4 md:hidden animate-fade-in-up shadow-2xl">
-                    {["Home", "Listings", "About", "Contact"].map((tab) => (
+                    {["Home", "Listings", "About", "Contact"]
+                        .filter(tab => {
+                            if (tab === "Listings") {
+                                return user?.publicMetadata?.role !== "landlord";
+                            }
+                            return true;
+                        })
+                        .map((tab) => (
                         <Link key={tab} href="#" className="text-lg font-bold text-foreground hover:text-primary transition-colors">
                             {tab}
                         </Link>

@@ -5,9 +5,12 @@ import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import HouseCard from "./HouseCard";
-import { PROPERTIES } from "@/lib/data";
 
-export default function HouseCarousel() {
+interface HouseCarouselProps {
+    listings?: any[];
+}
+
+export default function HouseCarousel({ listings = [] }: HouseCarouselProps) {
     const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" }, [Autoplay()]);
 
     const scrollPrev = useCallback(() => {
@@ -46,11 +49,16 @@ export default function HouseCarousel() {
 
                 <div className="embla overflow-hidden mt-8 -mx-4 px-4" ref={emblaRef}>
                     <div className="flex gap-6">
-                        {PROPERTIES.slice(0, 4).map((house) => (
+                        {listings.slice(0, 8).map((house) => (
                             <div key={house.id} className="flex-[0_0_100%] sm:flex-[0_0_50%] lg:flex-[0_0_25%] min-w-0">
                                 <HouseCard {...house} />
                             </div>
                         ))}
+                        {listings.length === 0 && (
+                            <div className="flex-[0_0_100%] py-12 text-center text-muted-foreground font-bold italic">
+                                Feature listings will appear here soon.
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
