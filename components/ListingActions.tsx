@@ -10,9 +10,10 @@ interface ListingActionsProps {
     listingId: string;
     landlordId: string;
     isOwner: boolean;
+    isUnlocked: boolean;
 }
 
-export default function ListingActions({ listingId, landlordId, isOwner }: ListingActionsProps) {
+export default function ListingActions({ listingId, landlordId, isOwner, isUnlocked }: ListingActionsProps) {
     const [bookmarked, setBookmarked] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
@@ -46,6 +47,11 @@ export default function ListingActions({ listingId, landlordId, isOwner }: Listi
     const handleMessage = async () => {
         if (isOwner) {
             toast.error("You cannot message yourself");
+            return;
+        }
+
+        if (!isUnlocked) {
+            toast.error("Please unlock the listing to message the landlord");
             return;
         }
 
@@ -112,11 +118,12 @@ export default function ListingActions({ listingId, landlordId, isOwner }: Listi
                         onClick={handleMessage}
                         disabled={loading}
                         className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all text-sm font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 ${
-                            showInput ? "bg-primary/10 text-primary border border-primary/20" : "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/30"
+                            showInput ? "bg-primary/10 text-primary border border-primary/20" : 
+                            !isUnlocked ? "bg-muted text-muted-foreground border-border" : "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/30"
                         }`}
                     >
                         <MessageSquare size={18} />
-                        <span>{loading ? "Connecting..." : showInput ? "Click Send Now" : "Message Landlord"}</span>
+                        <span>{loading ? "Connecting..." : showInput ? "Click Send Now" : !isUnlocked ? "Unlock to Message" : "Message Landlord"}</span>
                     </button>
                 )}
                 

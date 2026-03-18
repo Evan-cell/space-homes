@@ -479,3 +479,55 @@ export async function getTenantSavedListings() {
 
     return listings || [];
 }
+
+/**
+ * M-Pesa Actions
+ */
+import { initiateStkPush } from "./mpesa";
+
+export async function initiateStkPushAction(listingId: string, phoneNumber: string) {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    const amount = 50; // Ksh 50
+    const accountReference = `UNLOCK-${listingId.slice(0, 8)}`;
+
+    try {
+        const response = await initiateStkPush(phoneNumber, amount, accountReference);
+        
+        if (response.ResponseCode === "0") {
+            const supabase = getSupabaseAdmin();
+            await supabase.from("payments").insert({
+                user_id: userId,
+                listing_id: listingId,
+                merchant_request_id: response.MerchantRequestID,
+                checkout_request_id: response.CheckoutRequestID,
+                amount: amount,
+                phone_number: phoneNumber,
+                status: "pending"
+            });
+            return { success: true, checkoutRequestId: response.CheckoutRequestID };
+        } else {
+            return { success: false, message: response.ResponseDescription };
+        }
+    } catch (error) {
+        console.error("STK PUSH ACTION ERROR:", error);
+        return { success: false, message: "Failed to initiate M-Pesa payment" };
+    }
+}
+
+export async function isListingUnlocked(listingId: string) {
+    const { userId } = await auth();
+    if (!userId) return false;
+
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+        .from("listing_unlocks")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("listing_id", listingId)
+        .single();
+
+    if (error || !data) return false;
+    return true;
+}

@@ -13,6 +13,8 @@ import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import DeleteListingButton from "@/components/DeleteListingButton";
 import ListingActions from "@/components/ListingActions";
+import { isListingUnlocked } from "@/lib/supabase-actions";
+import UnlockContactButton from "@/components/UnlockContactButton";
 
 export default async function ListingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -24,6 +26,7 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
 
     const { userId } = await auth();
     const isOwner = userId === property.landlord_id;
+    const isUnlocked = await isListingUnlocked(id);
 
     return (
         <main className="min-h-screen bg-background transition-colors duration-300">
@@ -46,7 +49,8 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                     <ListingActions 
                         listingId={property.id} 
                         landlordId={property.landlord_id} 
-                        isOwner={isOwner} 
+                        isOwner={isOwner}
+                        isUnlocked={isUnlocked}
                     />
                     <button className="flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border hover:bg-muted transition-all text-sm font-bold ml-2">
                         <Share2 size={16} className="text-primary" />
@@ -177,24 +181,31 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                             </div>
                         </div>
 
+                        {/* Contact Buttons or Unlock Prompt */}
                         {!isOwner && (
                             <div className="space-y-3">
-                                <a 
-                                    href={`tel:${property.landlord?.phone?.replace(/\s+/g, '')}`}
-                                    className="flex items-center justify-center gap-3 w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95"
-                                >
-                                    <Phone size={18} />
-                                    Call Landlord
-                                </a>
-                                <a 
-                                    href={`https://wa.me/${property.landlord?.whatsapp?.replace(/[^0-9]/g, '')}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center justify-center gap-3 w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-green-500/30 active:scale-95"
-                                >
-                                    <MessageSquare size={18} />
-                                    Chat WhatsApp
-                                </a>
+                                {isUnlocked ? (
+                                    <>
+                                        <a 
+                                            href={`tel:${property.landlord?.phone?.replace(/\s+/g, '')}`}
+                                            className="flex items-center justify-center gap-3 w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95"
+                                        >
+                                            <Phone size={18} />
+                                            Call Landlord
+                                        </a>
+                                        <a 
+                                            href={`https://wa.me/${property.landlord?.whatsapp?.replace(/[^0-9]/g, '')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-center gap-3 w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-green-500/30 active:scale-95"
+                                        >
+                                            <MessageSquare size={18} />
+                                            Chat WhatsApp
+                                        </a>
+                                    </>
+                                ) : (
+                                    <UnlockContactButton listingId={property.id} isOwner={isOwner} />
+                                )}
                             </div>
                         )}
 
