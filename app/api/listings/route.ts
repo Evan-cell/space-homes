@@ -45,6 +45,7 @@ export async function POST(req: Request) {
                 amenities: body.amenities || [],
                 images: body.images || [],
                 rating: 0,
+                map_url: body.mapUrl || null,
             });
 
         if (error) {

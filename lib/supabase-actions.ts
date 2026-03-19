@@ -53,6 +53,7 @@ export async function createListing(formData: Record<string, unknown>) {
             space_size: formData.spaceSize ? String(formData.spaceSize) : null,
             phone_number: formData.phoneNumber || null,
             rating: 0,
+            map_url: (formData.mapUrl as string) || null,
         });
 
     if (error) {

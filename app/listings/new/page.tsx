@@ -31,6 +31,7 @@ export default function NewListingPage() {
         bathrooms: 1,
         spaceSize: "",
         phoneNumber: "",
+        mapUrl: "",
     });
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [uploadingImages, setUploadingImages] = useState(false);
@@ -189,6 +190,19 @@ export default function NewListingPage() {
                                         className="w-full bg-muted/30 border border-border pl-14 pr-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground"
                                         value={formData.location}
                                         onChange={(e) => setFormData({...formData, location: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Google Maps Pin Link (Optional)</label>
+                                <div className="relative">
+                                    <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 text-secondary" size={18} />
+                                    <input 
+                                        type="url" 
+                                        placeholder="e.g., https://maps.app.goo.gl/..."
+                                        className="w-full bg-muted/30 border border-border pl-14 pr-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground"
+                                        value={formData.mapUrl}
+                                        onChange={(e) => setFormData({...formData, mapUrl: e.target.value})}
                                     />
                                 </div>
                             </div>

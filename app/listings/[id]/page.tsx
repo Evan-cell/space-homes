@@ -120,6 +120,40 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                             ))}
                         </div>
                     </div>
+
+                    {/* Location & Map */}
+                    <div className="space-y-8 pt-6">
+                        <h3 className="text-xl font-black text-foreground">Location <span className="text-primary italic">Overview.</span></h3>
+                        <div className="bg-card border border-border p-3 md:p-6 rounded-[3rem] shadow-2xl shadow-primary/5 relative overflow-hidden group">
+                            {/* Embedded Google Map */}
+                            <div className="aspect-[4/3] md:aspect-[21/9] w-full rounded-[2rem] overflow-hidden bg-muted/30 relative border border-border/50">
+                                <iframe 
+                                    width="100%" 
+                                    height="100%" 
+                                    style={{ border: 0 }} 
+                                    loading="lazy" 
+                                    allowFullScreen 
+                                    referrerPolicy="no-referrer-when-downgrade" 
+                                    src={`https://maps.google.com/maps?q=${encodeURIComponent(property.location)}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+                                ></iframe>
+                            </div>
+                            
+                            {/* Premium Overlay Button if landlord provided exact pin */}
+                            {property.map_url && (
+                                <div className="absolute inset-x-0 bottom-0 p-8 flex justify-center bg-gradient-to-t from-black/60 via-black/30 to-transparent pointer-events-none rounded-b-[3rem]">
+                                    <a 
+                                        href={property.map_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="pointer-events-auto flex items-center gap-3 bg-primary text-primary-foreground py-4 px-8 rounded-full font-black text-sm uppercase tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all outline outline-4 outline-white/20 dark:outline-black/20"
+                                    >
+                                        <MapPin size={18} />
+                                        Open Exact Pin in Maps 
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Right Column: Sticky Contact Sidebar */}
