@@ -1,9 +1,8 @@
 import { getListingById } from "@/lib/supabase-actions";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import Image from "next/image";
 import { 
-    Star, MapPin, Share2, Heart, 
+    MapPin, Share2, Heart, 
     ShieldCheck, Phone, MessageSquare, 
     CheckCircle2, ArrowLeft, BedDouble, 
     Bath, Ruler, Shield
@@ -15,6 +14,7 @@ import DeleteListingButton from "@/components/DeleteListingButton";
 import ListingActions from "@/components/ListingActions";
 import { isListingUnlocked } from "@/lib/supabase-actions";
 import UnlockContactButton from "@/components/UnlockContactButton";
+import ListingImageGallery from "@/components/ListingImageGallery";
 
 export default async function ListingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -59,41 +59,11 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
             </div>
 
             {/* Image Gallery Hub */}
-            <div className="container mx-auto px-6 mb-12">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[300px] md:h-[500px]">
-                    <div className="md:col-span-2 row-span-2 relative overflow-hidden rounded-3xl group">
-                        <Image 
-                            src={property.images[0]} 
-                            alt={property.title} 
-                            fill 
-                            unoptimized
-                            className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black/60 to-transparent">
-                            <div className="flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1 rounded-full border border-primary/30 w-fit mb-3">
-                                <Star size={12} className="text-primary fill-primary" />
-                                <span className="text-[10px] font-black text-white uppercase">{property.rating || 4.9} Highly Rated</span>
-                            </div>
-                        </div>
-                    </div>
-                    {property.images.slice(1, 4).map((img: string, i: number) => (
-                        <div key={i} className="relative overflow-hidden rounded-3xl group">
-                            <Image 
-                                src={img} 
-                                alt={`${property.title} ${i + 2}`} 
-                                fill 
-                                unoptimized
-                                className="object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
-                        </div>
-                    ))}
-                    {property.images.length < 4 && (
-                        <div className="hidden md:block relative overflow-hidden rounded-3xl bg-muted/30 border-2 border-dashed border-border flex items-center justify-center">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">More photos coming soon</p>
-                        </div>
-                    )}
-                </div>
-            </div>
+            <ListingImageGallery 
+                images={property.images || []} 
+                title={property.title} 
+                rating={property.rating} 
+            />
 
             <div className="container mx-auto px-6 pb-24 lg:grid lg:grid-cols-3 lg:gap-16">
                 {/* Left Column: Details */}
