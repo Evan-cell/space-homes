@@ -51,9 +51,11 @@ export default function Navbar() {
             <div className="max-w-[1600px] mx-auto flex items-center justify-between">
                 {/* Brand Logo */}
                 <Link href="/" className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center transform group-hover:rotate-6 transition-transform shadow-lg shadow-primary/20">
-                        <span className="text-white font-black text-xl">S</span>
-                    </div>
+                    <img 
+                        src="/house-svgrepo-com.svg" 
+                        alt="SpaceKC Logo" 
+                        className="w-10 h-10 object-contain transform group-hover:rotate-6 transition-transform drop-shadow-[0_4px_12px_rgba(var(--primary),0.3)]" 
+                    />
                     <span className={`text-xl font-black tracking-tight transition-colors text-foreground`}>
                         Space<span className="text-primary italic">KC</span>
                     </span>
