@@ -127,17 +127,19 @@ export default function ListingActions({ listingId, landlordId, isOwner, isUnloc
                     </button>
                 )}
                 
-                <button 
-                    onClick={handleBookmark}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-xl border transition-all text-sm font-black uppercase tracking-widest active:scale-95 ${
-                        bookmarked 
-                        ? "bg-red-500/10 border-red-500 text-red-500" 
-                        : "bg-card border-border hover:bg-muted text-foreground"
-                    }`}
-                >
-                    <Heart size={18} className={bookmarked ? "fill-red-500" : ""} />
-                    <span>{bookmarked ? "Saved" : "Save"}</span>
-                </button>
+                {!isOwner && (
+                    <button 
+                        onClick={handleBookmark}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-xl border transition-all text-sm font-black uppercase tracking-widest active:scale-95 ${
+                            bookmarked 
+                            ? "bg-red-500/10 border-red-500 text-red-500" 
+                            : "bg-card border-border hover:bg-muted text-foreground"
+                        }`}
+                    >
+                        <Heart size={18} className={bookmarked ? "fill-red-500" : ""} />
+                        <span>{bookmarked ? "Saved" : "Save"}</span>
+                    </button>
+                )}
             </div>
         </div>
     );
