@@ -28,9 +28,9 @@ export default function ListingImageGallery({ images, title, rating }: ListingIm
     return (
         <>
             <div className="container mx-auto px-4 md:px-6 mb-8 md:mb-12">
-                <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-4 h-auto md:h-[500px]">
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 h-auto md:h-[600px]">
                     {/* Main Large Card with Arrows */}
-                    <div className="col-span-3 md:col-span-2 row-span-1 md:row-span-2 relative overflow-hidden rounded-2xl md:rounded-3xl group shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-border aspect-[4/3] md:aspect-auto">
+                    <div className="col-span-3 md:col-span-2 row-span-1 md:row-span-2 relative overflow-hidden rounded-2xl md:rounded-3xl group shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-border aspect-[3/2] md:aspect-auto">
                         <Image 
                             src={allImages[mainIndex]} 
                             alt={title} 
@@ -83,7 +83,7 @@ export default function ListingImageGallery({ images, title, rating }: ListingIm
                                         setMainIndex(i + 1);
                                     }
                                 }}
-                                className="col-span-1 relative overflow-hidden rounded-xl md:rounded-3xl group cursor-pointer border-2 border-transparent hover:border-primary/50 transition-all hover:shadow-xl hover:-translate-y-1 aspect-square md:aspect-auto"
+                                className="col-span-1 relative overflow-hidden rounded-xl md:rounded-2xl group cursor-pointer border-2 border-transparent hover:border-primary/50 transition-all hover:shadow-xl hover:-translate-y-1 aspect-[3/2] md:aspect-auto"
                             >
                                 <Image 
                                     src={img} 
