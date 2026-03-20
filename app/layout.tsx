@@ -15,13 +15,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "SpaceKC | Find Your Next Dream Rental",
     description: "Discover beautiful, verified rental homes in Nairobi. Find your perfect space with SpaceKC.",
-    url: "https://space-homes.vercel.app",
+    url: "https://www.spacekc.com",
     siteName: "SpaceKC",
     locale: "en_US",
     type: "website",
     images: [
       {
-        url: "/og-image.png",
+        url: "https://www.spacekc.com/og-image.png",
         width: 1200,
         height: 630,
         alt: "SpaceKC - Find Your Next Dream Rental",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "SpaceKC | Find Your Next Dream Rental",
     description: "Discover beautiful, verified rental homes in Nairobi. Find your perfect space with SpaceKC.",
-    images: ["/og-image.png"],
+    images: ["https://www.spacekc.com/og-image.png"],
   },
 };
 
