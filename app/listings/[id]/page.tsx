@@ -33,16 +33,16 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
             <Navbar />
 
             {/* Back Button & Actions */}
-            <div className="pt-28 pb-6 container mx-auto px-6 flex items-center justify-between">
+            <div className="pt-28 pb-6 container mx-auto px-4 md:px-6 flex items-center justify-between">
                 <Link href="/listings" className="flex items-center gap-2 group text-muted-foreground hover:text-foreground transition-colors">
                     <div className="w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-all">
                         <ArrowLeft size={16} />
                     </div>
-                    <span className="text-sm font-bold">Back to Search</span>
+                    <span className="text-sm font-bold hidden sm:inline">Back to Search</span>
                 </Link>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                     {isOwner && (
-                        <div className="mr-2">
+                        <div className="mr-0 md:mr-2">
                             <DeleteListingButton id={property.id} />
                         </div>
                     )}
@@ -52,7 +52,7 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                         isOwner={isOwner}
                         isUnlocked={isUnlocked}
                     />
-                    <button className="flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border hover:bg-muted transition-all text-sm font-bold ml-2">
+                    <button className="flex items-center gap-2 px-3 md:px-4 py-3 rounded-xl bg-card border border-border hover:bg-muted transition-all text-sm font-bold ml-1 md:ml-2">
                         <Share2 size={16} className="text-primary" />
                     </button>
                 </div>
@@ -65,11 +65,11 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                 rating={property.rating} 
             />
 
-            <div className="container mx-auto px-6 pb-24 lg:grid lg:grid-cols-3 lg:gap-16">
+            <div className="container mx-auto px-4 md:px-6 pb-24 lg:grid lg:grid-cols-3 lg:gap-16">
                 {/* Left Column: Details */}
-                <div className="lg:col-span-2 space-y-12">
+                <div className="lg:col-span-2 space-y-8 md:space-y-12">
                     {/* Core Info */}
-                    <div className="space-y-4">
+                    <div className="space-y-3 md:space-y-4">
                         <div className="flex flex-wrap items-center gap-3">
                             <span className="bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">{property.type}</span>
                             <div className="flex items-center gap-1 text-muted-foreground">
@@ -77,23 +77,23 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                                 <span className="text-sm font-bold">{property.location}</span>
                             </div>
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-black text-foreground leading-[1.1]">{property.title}</h1>
+                        <h1 className="text-3xl md:text-5xl font-black text-foreground leading-[1.1]">{property.title}</h1>
                     </div>
 
                     {/* Features Row */}
-                    <div className="flex flex-wrap gap-8 items-center border-b border-border pb-8">
+                    <div className="flex flex-wrap gap-4 md:gap-8 items-center border-b border-border pb-6 md:pb-8">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-primary"><BedDouble size={24} /></div>
-                            <div><p className="text-[10px] font-black uppercase text-muted-foreground">Bedrooms</p><p className="font-bold">{property.bedrooms || 1} {property.bedrooms === 1 ? 'Room' : 'Rooms'}</p></div>
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-muted flex items-center justify-center text-primary"><BedDouble size={20} className="md:w-[24px]" /></div>
+                            <div><p className="text-[10px] font-black uppercase text-muted-foreground">Bedrooms</p><p className="font-bold text-sm md:text-base">{property.bedrooms || 1} {property.bedrooms === 1 ? 'Room' : 'Rooms'}</p></div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-primary"><Bath size={24} /></div>
-                            <div><p className="text-[10px] font-black uppercase text-muted-foreground">Bathrooms</p><p className="font-bold">{property.bathrooms || 1} {property.bathrooms === 1 ? 'Unit' : 'Units'}</p></div>
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-muted flex items-center justify-center text-primary"><Bath size={20} className="md:w-[24px]" /></div>
+                            <div><p className="text-[10px] font-black uppercase text-muted-foreground">Bathrooms</p><p className="font-bold text-sm md:text-base">{property.bathrooms || 1} {property.bathrooms === 1 ? 'Unit' : 'Units'}</p></div>
                         </div>
                         {property.spaceSize && (
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-primary"><Ruler size={24} /></div>
-                                <div><p className="text-[10px] font-black uppercase text-muted-foreground">Space</p><p className="font-bold">{property.spaceSize} sqft</p></div>
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-muted flex items-center justify-center text-primary"><Ruler size={20} className="md:w-[24px]" /></div>
+                                <div><p className="text-[10px] font-black uppercase text-muted-foreground">Space</p><p className="font-bold text-sm md:text-base">{property.spaceSize} sqft</p></div>
                             </div>
                         )}
                     </div>
@@ -157,13 +157,13 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                 </div>
 
                 {/* Right Column: Sticky Contact Sidebar */}
-                <div className="mt-12 lg:mt-0">
-                    <div className="lg:sticky lg:top-32 bg-card border border-border p-8 rounded-[3rem] shadow-2xl shadow-primary/5 space-y-8">
-                        <div className="space-y-2">
+                <div className="mt-8 md:mt-12 lg:mt-0">
+                    <div className="lg:sticky lg:top-32 bg-card border border-border p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-2xl shadow-primary/5 space-y-6 md:space-y-8">
+                        <div className="space-y-1 md:space-y-2">
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Monthly Rent</span>
                             <div className="flex items-baseline gap-2">
-                                <h2 className="text-4xl font-black text-primary">{property.price}</h2>
-                                <span className="text-muted-foreground font-bold">/ month</span>
+                                <h2 className="text-3xl md:text-4xl font-black text-primary">{property.price}</h2>
+                                <span className="text-sm md:text-base text-muted-foreground font-bold">/ month</span>
                             </div>
                         </div>
 
