@@ -87,19 +87,19 @@ export default function Navbar() {
                 </div>
 
                 {/* Right Actions */}
-                <div className="flex items-center gap-2 md:gap-4">
-                    <button className="p-2.5 rounded-full hover:bg-accent transition-all shrink-0">
+                <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+                    <button className="hidden sm:flex p-2.5 rounded-full hover:bg-accent transition-all shrink-0">
                         <Search className="w-5 h-5 text-foreground" />
                     </button>
 
                     <Show when="signed-in">
                         <Link 
                             href="/dashboard" 
-                            className="p-2.5 rounded-full hover:bg-accent transition-all shrink-0 relative group"
+                            className="p-2 sm:p-2.5 rounded-full hover:bg-accent transition-all shrink-0 relative group"
                         >
                             <MessageSquare className="w-5 h-5 text-foreground group-hover:text-primary transition-colors" />
                             {unreadCount > 0 && (
-                                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-black border-2 border-background animate-in zoom-in duration-300">
+                                <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-black border-2 border-background animate-in zoom-in duration-300">
                                     {unreadCount}
                                 </span>
                             )}
@@ -107,7 +107,9 @@ export default function Navbar() {
                     </Show>
 
                     <div className="flex items-center gap-2 shrink-0">
-                        <ThemeToggle />
+                        <div className="hidden sm:block">
+                            <ThemeToggle />
+                        </div>
                         <Show when="signed-out">
                             <SignInButton mode="modal">
                                 <button className="hidden sm:flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-full font-bold text-sm transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-95">
@@ -119,16 +121,18 @@ export default function Navbar() {
                         <Show when="signed-in">
                             <Link 
                                 href="/dashboard" 
-                                className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors px-4 py-2 rounded-xl bg-card border border-border"
+                                className="hidden lg:block text-sm font-bold text-muted-foreground hover:text-primary transition-colors px-4 py-2 rounded-xl bg-card border border-border"
                             >
                                 {user?.publicMetadata?.role === "landlord" ? "Landlord Dashboard" : "Dashboard"}
                             </Link>
-                            <UserButton />
+                            <div className="pl-1 sm:pl-0">
+                                <UserButton />
+                            </div>
                         </Show>
                     </div>
 
                     <button
-                        className="md:hidden p-2 text-foreground shrink-0"
+                        className="md:hidden p-2 ml-1 text-foreground shrink-0 rounded-full hover:bg-accent transition-colors"
                         onClick={() => setIsOpen(!isOpen)}
                     >
                         {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -138,7 +142,12 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             {isOpen && (
-                <div className="absolute top-20 left-4 right-4 bg-card border border-border rounded-3xl p-8 flex flex-col gap-4 md:hidden animate-fade-in-up shadow-2xl">
+                <div className="absolute top-20 left-4 right-4 bg-card border border-border rounded-3xl p-6 flex flex-col gap-4 md:hidden animate-in fade-in slide-in-from-top-4 shadow-2xl z-50">
+                    <div className="flex items-center justify-between pb-4 border-b border-border/50">
+                        <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Appearance</span>
+                        <ThemeToggle />
+                    </div>
+
                     {["Home", "Listings", "About", "Contact"]
                         .filter(tab => {
                             if (tab === "Listings") {
@@ -147,17 +156,39 @@ export default function Navbar() {
                             return true;
                         })
                         .map((tab) => (
-                        <Link key={tab} href={
+                        <Link 
+                            key={tab} 
+                            href={
                                 tab === "Home" ? "/" : 
                                 (tab === "Listings" && !user) ? "/sign-up?redirect_url=/listings" : 
                                 `/${tab.toLowerCase()}`
-                            } className="text-lg font-bold text-foreground hover:text-primary transition-colors">
+                            } 
+                            className="text-lg font-black text-foreground hover:text-primary transition-colors py-2"
+                            onClick={() => setIsOpen(false)}
+                        >
                             {tab}
                         </Link>
                     ))}
-                    <Link href="/login" className="bg-primary text-white text-center py-4 rounded-2xl font-bold mt-4 shadow-lg shadow-primary/20">
-                        Login / Sign Up
-                    </Link>
+
+                    <div className="pt-4 border-t border-border/50">
+                        <Show when="signed-out">
+                            <SignInButton mode="modal">
+                                <button className="w-full bg-primary text-primary-foreground text-center py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+                                    Join SpaceKC
+                                </button>
+                            </SignInButton>
+                        </Show>
+
+                        <Show when="signed-in">
+                            <Link 
+                                href="/dashboard" 
+                                className="w-full flex justify-center bg-primary text-primary-foreground text-center py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                Go to Dashboard
+                            </Link>
+                        </Show>
+                    </div>
                 </div>
             )}
         </nav>
