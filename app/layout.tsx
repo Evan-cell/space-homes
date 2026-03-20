@@ -8,7 +8,23 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "SpaceKC | Find Your Next Dream Rental",
-  description: "Beautiful and verified rentals in Nairobi",
+  description: "Discover beautiful, verified rental homes in Nairobi. Find your perfect space with SpaceKC.",
+  icons: {
+    icon: "/house-svgrepo-com.svg",
+  },
+  openGraph: {
+    title: "SpaceKC | Find Your Next Dream Rental",
+    description: "Discover beautiful, verified rental homes in Nairobi. Find your perfect space with SpaceKC.",
+    url: "https://space-homes.vercel.app",
+    siteName: "SpaceKC",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "SpaceKC | Find Your Next Dream Rental",
+    description: "Discover beautiful, verified rental homes in Nairobi. Find your perfect space with SpaceKC.",
+  },
 };
 
 export default function RootLayout({
