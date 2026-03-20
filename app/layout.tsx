@@ -19,11 +19,20 @@ export const metadata: Metadata = {
     siteName: "SpaceKC",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "SpaceKC - Find Your Next Dream Rental",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "SpaceKC | Find Your Next Dream Rental",
     description: "Discover beautiful, verified rental homes in Nairobi. Find your perfect space with SpaceKC.",
+    images: ["/og-image.png"],
   },
 };
 
