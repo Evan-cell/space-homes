@@ -2,10 +2,10 @@ import { getListingById } from "@/lib/supabase-actions";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { 
-    MapPin, Share2, Heart, 
+    MapPin,
     ShieldCheck, Phone, MessageSquare, 
     CheckCircle2, ArrowLeft, BedDouble, 
-    Bath, Ruler, Shield
+    Bath, Ruler
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,6 +15,7 @@ import ListingActions from "@/components/ListingActions";
 import { isListingUnlocked } from "@/lib/supabase-actions";
 import UnlockContactButton from "@/components/UnlockContactButton";
 import ListingImageGallery from "@/components/ListingImageGallery";
+import ShareButton from "@/components/ShareButton";
 
 export default async function ListingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -52,9 +53,7 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                         isOwner={isOwner}
                         isUnlocked={isUnlocked}
                     />
-                    <button className="flex items-center gap-2 px-3 md:px-4 py-3 rounded-xl bg-card border border-border hover:bg-muted transition-all text-sm font-bold ml-1 md:ml-2">
-                        <Share2 size={16} className="text-primary" />
-                    </button>
+                    <ShareButton listingId={property.id} title={property.title} />
                 </div>
             </div>
 
