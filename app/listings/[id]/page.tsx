@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import DeleteListingButton from "@/components/DeleteListingButton";
 import ListingActions from "@/components/ListingActions";
 import { isListingUnlocked } from "@/lib/supabase-actions";
@@ -26,8 +26,15 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
     }
 
     const { userId } = await auth();
+    const client = await clerkClient();
+    const user = userId ? await client.users.getUser(userId) : null;
     const isOwner = userId === property.landlord_id;
     const isUnlocked = await isListingUnlocked(id);
+    const isSubscribed = user?.publicMetadata?.isSubscribed === true;
+    const isTenant = user?.publicMetadata?.role === "tenant";
+    
+    // Gated content logic: Hide for non-subscribed tenants if not explicitly unlocked
+    const showGatedContent = isOwner || isSubscribed || isUnlocked;
 
     return (
         <main className="min-h-screen bg-background transition-colors duration-300">
@@ -123,9 +130,9 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                     {/* Location & Map */}
                     <div className="space-y-8 pt-6">
                         <h3 className="text-xl font-black text-foreground">Location <span className="text-primary italic">Overview.</span></h3>
-                        <div className="bg-card border border-border p-3 md:p-6 rounded-[3rem] shadow-2xl shadow-primary/5 relative overflow-hidden group">
+                        <div className="bg-card border border-border p-3 md:p-6 rounded-[3rem] shadow-2xl shadow-primary/5 relative overflow-hidden group min-h-[300px]">
                             {/* Embedded Google Map */}
-                            <div className="aspect-[4/3] md:aspect-[21/9] w-full rounded-[2rem] overflow-hidden bg-muted/30 relative border border-border/50">
+                            <div className={`aspect-[4/3] md:aspect-[21/9] w-full rounded-[2rem] overflow-hidden bg-muted/30 relative border border-border/50 ${!showGatedContent ? 'blur-xl grayscale opacity-50' : ''}`}>
                                 <iframe 
                                     width="100%" 
                                     height="100%" 
@@ -138,7 +145,7 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                             </div>
                             
                             {/* Premium Overlay Button if landlord provided exact pin */}
-                            {property.map_url && (
+                            {property.map_url && showGatedContent && (
                                 <div className="absolute inset-x-0 bottom-0 p-8 flex justify-center bg-gradient-to-t from-black/60 via-black/30 to-transparent pointer-events-none rounded-b-[3rem]">
                                     <a 
                                         href={property.map_url}
@@ -149,6 +156,22 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                                         <MapPin size={18} />
                                         Open Exact Pin in Maps 
                                     </a>
+                                </div>
+                            )}
+
+                            {!showGatedContent && (
+                                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center bg-background/20 backdrop-blur-sm">
+                                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4 animate-bounce">
+                                        <MapPin size={32} />
+                                    </div>
+                                    <h4 className="text-xl font-black text-foreground mb-2">Unlock House Pin Location</h4>
+                                    <p className="text-xs font-bold text-muted-foreground max-w-[240px] mb-6">Subscribe to view the exact location and navigate to this property.</p>
+                                    <Link 
+                                        href="/subscribe"
+                                        className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all"
+                                    >
+                                        Get Full Access
+                                    </Link>
                                 </div>
                             )}
                         </div>
@@ -186,29 +209,37 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
 
                         {/* Contact Buttons or Unlock Prompt */}
                         {!isOwner && (
-                            <div className="space-y-3">
-                                {isUnlocked ? (
-                                    <>
-                                        <a 
-                                            href={`tel:${property.landlord?.phone?.replace(/\s+/g, '')}`}
-                                            className="flex items-center justify-center gap-3 w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95"
+                            <div className="space-y-3 relative">
+                                {!showGatedContent && (
+                                    <div className="absolute inset-x-0 top-0 z-10 p-6 flex flex-col items-center justify-center bg-card/80 backdrop-blur-md rounded-2xl border border-primary/20 shadow-xl">
+                                        <Phone size={24} className="text-primary mb-3 animate-pulse" />
+                                        <Link 
+                                            href="/subscribe"
+                                            className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-center shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
                                         >
-                                            <Phone size={18} />
-                                            Call Landlord
-                                        </a>
-                                        <a 
-                                            href={`https://wa.me/${property.landlord?.whatsapp?.replace(/[^0-9]/g, '')}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-center gap-3 w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-green-500/30 active:scale-95"
-                                        >
-                                            <MessageSquare size={18} />
-                                            Chat WhatsApp
-                                        </a>
-                                    </>
-                                ) : (
-                                    <UnlockContactButton listingId={property.id} isOwner={isOwner} />
+                                            Unlock Contact Details
+                                        </Link>
+                                    </div>
                                 )}
+                                
+                                <div className={!showGatedContent ? "blur-md select-none pointer-events-none opacity-40 shrink-0" : ""}>
+                                    <a 
+                                        href={`tel:${property.landlord?.phone?.replace(/\s+/g, '')}`}
+                                        className="flex items-center justify-center gap-3 w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95 mb-3"
+                                    >
+                                        <Phone size={18} />
+                                        Call Landlord
+                                    </a>
+                                    <a 
+                                        href={`https://wa.me/${property.landlord?.whatsapp?.replace(/[^0-9]/g, '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-3 w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-green-500/30 active:scale-95"
+                                    >
+                                        <MessageSquare size={18} />
+                                        Chat WhatsApp
+                                    </a>
+                                </div>
                             </div>
                         )}
 

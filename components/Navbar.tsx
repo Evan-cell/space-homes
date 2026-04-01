@@ -86,11 +86,8 @@ export default function Navbar() {
                     ))}
                 </div>
 
-                {/* Right Actions */}
-                <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-                    <button className="hidden sm:flex p-2.5 rounded-full hover:bg-accent transition-all shrink-0">
-                        <Search className="w-5 h-5 text-foreground" />
-                    </button>
+                    {/* Unified Mobile/Desktop Actions */}
+                    <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
 
                     <Show when="signed-in">
                         <Link 

@@ -107,11 +107,15 @@ export default function Hero() {
                                     <House className="w-6 h-6 text-secondary group-hover/input:scale-110 transition-transform" />
                                     <div className="flex flex-col items-start w-full">
                                         <span className="text-[10px] uppercase font-black text-muted-foreground mb-1">Type</span>
-                                        <select className="bg-transparent border-none outline-none text-foreground font-bold w-full appearance-none cursor-pointer">
-                                            <option value="">Bedsitter</option>
-                                            <option value="single">Single</option>
-                                            <option value="1br">1 Bedroom</option>
-                                            <option value="2br">2+ Bedrooms</option>
+                                        <select 
+                                            className="bg-transparent border-none outline-none text-foreground font-bold w-full appearance-none cursor-pointer"
+                                            onChange={(e) => router.push(`/listings?type=${e.target.value}`)}
+                                        >
+                                            <option value="All">All Types</option>
+                                            <option value="Bedsitter">Bedsitter</option>
+                                            <option value="Single Room">Single Room</option>
+                                            <option value="One Bedroom">One Bedroom</option>
+                                            <option value="Two Bedroom">Two Bedroom</option>
                                         </select>
                                     </div>
                                 </div>

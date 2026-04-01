@@ -24,8 +24,11 @@ function ListingsContent() {
     const ITEMS_PER_PAGE = 8;
 
     useEffect(() => {
+        setLoading(true);
         async function loadListings() {
             try {
+                // Add artificial delay for smooth transition and showing off the skeleton
+                await new Promise(resolve => setTimeout(resolve, 800));
                 const data = await getListings()
                 console.log("Listings loaded:", data)
                 setListings(data)
@@ -152,15 +155,20 @@ function ListingsContent() {
                         {/* Budget */}
                         <div className="flex flex-col gap-2">
                             <div className="flex justify-between items-center ml-1">
-                                <label className="text-[10px] uppercase font-black text-muted-foreground">Max Budget</label>
-                                <span className="text-[10px] font-black text-primary">KES {maxPrice.toLocaleString()}</span>
+                                <label className="text-[10px] uppercase font-black text-muted-foreground">Max Budget (KSh)</label>
+                                <input 
+                                    type="number" 
+                                    value={maxPrice}
+                                    onChange={(e) => setMaxPrice(Number(e.target.value))}
+                                    className="w-24 bg-muted/50 border border-border rounded-lg px-2 py-1 text-xs font-black text-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                                />
                             </div>
                             <div className="relative flex items-center h-12 px-4 bg-muted border border-border/50 rounded-2xl">
                                 <Banknote className="w-4 h-4 text-primary mr-3" />
                                 <input 
                                     type="range" 
                                     min="3000" 
-                                    max="50000" 
+                                    max="100000" 
                                     step="500"
                                     value={maxPrice}
                                     onChange={(e) => setMaxPrice(parseInt(e.target.value))}
@@ -182,66 +190,83 @@ function ListingsContent() {
                     </div>
                 </div>
 
-                {/* Property Grid */}
-                {paginatedProperties.length > 0 ? (
+                {/* Loading State or Content */}
+                {loading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        {Array.from({ length: 8 }).map((_, i) => (
+                            <div key={i} className="space-y-4 animate-pulse">
+                                <div className="aspect-[4/5] bg-muted rounded-[2.5rem] w-full" />
+                                <div className="space-y-2 px-2">
+                                    <div className="h-4 bg-muted rounded-full w-2/3" />
+                                    <div className="h-3 bg-muted rounded-full w-1/3" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
                     <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up">
-                            {paginatedProperties.map((property) => (
-                                <HouseCard key={property.id} {...property} />
-                            ))}
-                        </div>
-
-                        {/* Pagination UI */}
-                        {totalPages > 1 && (
-                            <div className="mt-20 flex items-center justify-center gap-4">
-                                <button 
-                                    disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                    className="w-12 h-12 rounded-2xl bg-card border border-border flex items-center justify-center text-foreground disabled:opacity-30 hover:border-primary transition-all active:scale-90"
-                                >
-                                    <ChevronLeft size={20} />
-                                </button>
-                                
-                                <div className="flex items-center gap-2">
-                                    {Array.from({ length: totalPages }).map((_, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setCurrentPage(i + 1)}
-                                            className={`w-12 h-12 rounded-2xl font-black text-sm transition-all ${
-                                                currentPage === i + 1 
-                                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110" 
-                                                : "bg-card border border-border text-muted-foreground hover:border-primary/50"
-                                            }`}
-                                        >
-                                            {i + 1}
-                                        </button>
+                        {paginatedProperties.length > 0 ? (
+                            <>
+                                {/* Property Grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up">
+                                    {paginatedProperties.map((property) => (
+                                        <HouseCard key={property.id} {...property} />
                                     ))}
                                 </div>
 
+                                {/* Pagination UI */}
+                                {totalPages > 1 && (
+                                    <div className="mt-20 flex items-center justify-center gap-4">
+                                        <button 
+                                            disabled={currentPage === 1}
+                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            className="w-12 h-12 rounded-2xl bg-card border border-border flex items-center justify-center text-foreground disabled:opacity-30 hover:border-primary transition-all active:scale-90"
+                                        >
+                                            <ChevronLeft size={20} />
+                                        </button>
+                                        
+                                        <div className="flex items-center gap-2">
+                                            {Array.from({ length: totalPages }).map((_, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => setCurrentPage(i + 1)}
+                                                    className={`w-12 h-12 rounded-2xl font-black text-sm transition-all ${
+                                                        currentPage === i + 1 
+                                                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110" 
+                                                        : "bg-card border border-border text-muted-foreground hover:border-primary/50"
+                                                    }`}
+                                                >
+                                                    {i + 1}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <button 
+                                            disabled={currentPage === totalPages}
+                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                            className="w-12 h-12 rounded-2xl bg-card border border-border flex items-center justify-center text-foreground disabled:opacity-30 hover:border-primary transition-all active:scale-90"
+                                        >
+                                            <ChevronRight size={20} />
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="py-32 text-center animate-fade-in">
+                                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <Search className="w-8 h-8 text-muted-foreground/30" />
+                                </div>
+                                <h3 className="text-xl font-bold text-foreground mb-2">No matching rentals found</h3>
+                                <p className="text-muted-foreground">Try adjusting your filters or search query.</p>
                                 <button 
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                    className="w-12 h-12 rounded-2xl bg-card border border-border flex items-center justify-center text-foreground disabled:opacity-30 hover:border-primary transition-all active:scale-90"
+                                    onClick={() => {setSearchQuery(""); setPropertyType("All"); setMaxPrice(30000);}}
+                                    className="mt-8 text-primary font-black uppercase tracking-widest text-[10px] hover:underline"
                                 >
-                                    <ChevronRight size={20} />
+                                    Reset all filters
                                 </button>
                             </div>
                         )}
                     </>
-                ) : (
-                    <div className="py-32 text-center animate-fade-in">
-                        <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Search className="w-8 h-8 text-muted-foreground/30" />
-                        </div>
-                        <h3 className="text-xl font-bold text-foreground mb-2">No matching rentals found</h3>
-                        <p className="text-muted-foreground">Try adjusting your filters or search query.</p>
-                        <button 
-                            onClick={() => {setSearchQuery(""); setPropertyType("All"); setMaxPrice(30000);}}
-                            className="mt-8 text-primary font-black uppercase tracking-widest text-[10px] hover:underline"
-                        >
-                            Reset all filters
-                        </button>
-                    </div>
                 )}
             </div>
 
