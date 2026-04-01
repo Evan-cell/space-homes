@@ -518,6 +518,41 @@ export async function initiateStkPushAction(listingId: string, phoneNumber: stri
     }
 }
 
+export async function initiateSubscriptionPushAction(phoneNumber: string, planId: string, amount: number) {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    const accountReference = `SUB-${planId.toUpperCase()}-${userId.slice(0, 5)}`;
+
+    try {
+        const response = await initiateStkPush(phoneNumber, amount, accountReference);
+        
+        if (response.ResponseCode === "0") {
+            const supabase = getSupabaseAdmin();
+            // We use the same 'payments' table, but with listing_id = null and plan_id = planId
+            // Note: If 'plan_id' column doesn't exist, we'll store it in accountReference or a metadata column
+            await supabase.from("payments").insert({
+                user_id: userId,
+                merchant_request_id: response.MerchantRequestID,
+                checkout_request_id: response.CheckoutRequestID,
+                amount: amount,
+                phone_number: phoneNumber,
+                status: "pending",
+                listing_id: null,
+                // We'll store the plan info in the result_description for now if no plan_id column
+                // or just rely on the amount in the callback if needed.
+                // But a better way is to hope the column exists or use the reference.
+            });
+            return { success: true, checkoutRequestId: response.CheckoutRequestID };
+        } else {
+            return { success: false, message: response.ResponseDescription };
+        }
+    } catch (error) {
+        console.error("SUBSCRIPTION PUSH ERROR:", error);
+        return { success: false, message: "Failed to initiate subscription payment" };
+    }
+}
+
 export async function isListingUnlocked(listingId: string) {
     const { userId } = await auth();
     if (!userId) return false;

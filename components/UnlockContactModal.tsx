@@ -11,11 +11,17 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 interface UnlockContactModalProps {
-    listingId: string;
+    listingId?: string;
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
     userPhone?: string;
+    mode?: "listing" | "subscription";
+    plan?: {
+        name: string;
+        price: string;
+        period: string;
+    };
 }
 
 export default function UnlockContactModal({ 
@@ -23,13 +29,21 @@ export default function UnlockContactModal({
     isOpen, 
     onClose, 
     onSuccess,
-    userPhone = ""
+    userPhone = "",
+    mode = "listing",
+    plan
 }: UnlockContactModalProps) {
     const [phone, setPhone] = useState(userPhone);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<"idle" | "initiating" | "pending" | "success" | "error">("idle");
     const [errorMessage, setErrorMessage] = useState("");
     const router = useRouter();
+
+    const amount = mode === "subscription" ? parseInt(plan?.price || "0") : 50;
+    const title = mode === "subscription" ? `Subscribe to ${plan?.name}` : "Unlock Contact Now.";
+    const description = mode === "subscription" 
+        ? `Pay KSh ${plan?.price} for ${plan?.period}ly access to all premium features.`
+        : `Pay a one-time fee of KSh 50 to access landlord phone & WhatsApp details.`;
 
     if (!isOpen) return null;
 
@@ -44,16 +58,39 @@ export default function UnlockContactModal({
         setErrorMessage("");
 
         try {
-            const res = await initiateStkPushAction(listingId, phone);
+            let res;
+            if (mode === "subscription" && plan) {
+                // We'll create this action next
+                const { initiateSubscriptionPushAction } = await import("@/lib/supabase-actions");
+                res = await initiateSubscriptionPushAction(phone, plan.name.toLowerCase().split(' ')[0], amount);
+            } else {
+                res = await initiateStkPushAction(listingId!, phone);
+            }
             
             if (res.success) {
                 setStatus("pending");
                 toast.success("STK push sent to your phone. Please enter your PIN.");
                 
-                // Start polling for unlock status
+                // Polling for status
                 const interval = setInterval(async () => {
-                    const unlocked = await isListingUnlocked(listingId);
-                    if (unlocked) {
+                    let confirmed = false;
+                    if (mode === "subscription") {
+                        // For subscriptions, we check the user's metadata or a dedicated table
+                        // But since callback updates Clerk metadata, we can just refresh or wait
+                        // For now, let's assume successful initiation means we're waiting for the webhook
+                        // A better way is polling a 'payments' table status
+                        const { getSupabaseAdmin } = await import("@/lib/supabase");
+                        const { data } = await getSupabaseAdmin()
+                            .from("payments")
+                            .select("status")
+                            .eq("checkout_request_id", res.checkoutRequestId)
+                            .single();
+                        if (data?.status === "completed") confirmed = true;
+                    } else {
+                        confirmed = await isListingUnlocked(listingId!);
+                    }
+
+                    if (confirmed) {
                         clearInterval(interval);
                         setStatus("success");
                         toast.success("Payment confirmed! Access granted.");
@@ -65,7 +102,6 @@ export default function UnlockContactModal({
                     }
                 }, 3000);
 
-                // Stop polling after 60 seconds
                 setTimeout(() => {
                     clearInterval(interval);
                     if (status !== "success") {
@@ -79,6 +115,7 @@ export default function UnlockContactModal({
                 setErrorMessage(res.message || "Failed to initiate payment");
             }
         } catch (error) {
+            console.error("Payment Error:", error);
             setStatus("error");
             setErrorMessage("An unexpected error occurred");
         } finally {
@@ -102,11 +139,17 @@ export default function UnlockContactModal({
                     {/* Header */}
                     <div className="text-center space-y-3">
                         <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto text-primary animate-pulse">
-                            <CreditCard size={40} />
+                            {mode === "subscription" ? <ShieldCheck size={40} /> : <CreditCard size={40} />}
                         </div>
-                        <h2 className="text-3xl font-black text-foreground tracking-tight">Unlock Contact <span className="text-primary italic">Now.</span></h2>
+                        <h2 className="text-3xl font-black text-foreground tracking-tight">
+                            {mode === "subscription" ? (
+                                <>Subscribe <span className="text-primary italic">{plan?.name.split(' ')[0]}.</span></>
+                            ) : (
+                                <>Unlock Contact <span className="text-primary italic">Now.</span></>
+                            )}
+                        </h2>
                         <p className="text-muted-foreground font-medium max-w-xs mx-auto">
-                            Pay a one-time fee of <span className="text-primary font-black">Ksh 50</span> to access landlord phone & WhatsApp details.
+                            {description}
                         </p>
                     </div>
 
@@ -117,7 +160,9 @@ export default function UnlockContactModal({
                             </div>
                             <div className="space-y-1">
                                 <p className="text-xl font-black text-foreground">Success!</p>
-                                <p className="text-sm font-bold text-muted-foreground">Contact details are now visible.</p>
+                                <p className="text-sm font-bold text-muted-foreground">
+                                    {mode === "subscription" ? "Your subscription is now active." : "Contact details are now visible."}
+                                </p>
                             </div>
                         </div>
                     ) : (
@@ -168,7 +213,7 @@ export default function UnlockContactModal({
                                     </>
                                 ) : (
                                     <>
-                                        <span>Unlock Membership</span>
+                                        <span>Confirm Payment</span>
                                         <ShieldCheck className="group-hover:translate-x-1 transition-transform" size={18} />
                                     </>
                                 )}

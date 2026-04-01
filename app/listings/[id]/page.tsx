@@ -30,7 +30,12 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
     const user = userId ? await client.users.getUser(userId) : null;
     const isOwner = userId === property.landlord_id;
     const isUnlocked = await isListingUnlocked(id);
-    const isSubscribed = user?.publicMetadata?.isSubscribed === true;
+    
+    // Check subscription status with expiry
+    const subscriptionExpiry = user?.publicMetadata?.subscriptionExpiry as string;
+    const isSubscribed = user?.publicMetadata?.isSubscribed === true && 
+                        (!subscriptionExpiry || new Date(subscriptionExpiry) > new Date());
+                        
     const isTenant = user?.publicMetadata?.role === "tenant";
     
     // Gated content logic: Hide for non-subscribed tenants if not explicitly unlocked
@@ -167,7 +172,7 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                                     <h4 className="text-xl font-black text-foreground mb-2">Unlock House Pin Location</h4>
                                     <p className="text-xs font-bold text-muted-foreground max-w-[240px] mb-6">Subscribe to view the exact location and navigate to this property.</p>
                                     <Link 
-                                        href="/subscribe"
+                                        href="/subscription"
                                         className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all"
                                     >
                                         Get Full Access
@@ -214,7 +219,7 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
                                     <div className="absolute inset-x-0 top-0 z-10 p-6 flex flex-col items-center justify-center bg-card/80 backdrop-blur-md rounded-2xl border border-primary/20 shadow-xl">
                                         <Phone size={24} className="text-primary mb-3 animate-pulse" />
                                         <Link 
-                                            href="/subscribe"
+                                            href="/subscription"
                                             className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-center shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
                                         >
                                             Unlock Contact Details

@@ -63,10 +63,13 @@ export default function Navbar() {
 
                 {/* Center Links */}
                 <div className="hidden md:flex items-center gap-8">
-                    {["Home", "Listings", "About", "Contact"]
+                    {["Home", "Listings", "Subscription", "About", "Contact"]
                         .filter(item => {
                             if (item === "Listings") {
                                 return user?.publicMetadata?.role !== "landlord";
+                            }
+                            if (item === "Subscription") {
+                                return user?.publicMetadata?.role === "tenant";
                             }
                             return true;
                         })
@@ -145,10 +148,13 @@ export default function Navbar() {
                         <ThemeToggle />
                     </div>
 
-                    {["Home", "Listings", "About", "Contact"]
+                    {["Home", "Listings", "Subscription", "About", "Contact"]
                         .filter(tab => {
                             if (tab === "Listings") {
                                 return user?.publicMetadata?.role !== "landlord";
+                            }
+                            if (tab === "Subscription") {
+                                return user?.publicMetadata?.role === "tenant";
                             }
                             return true;
                         })
