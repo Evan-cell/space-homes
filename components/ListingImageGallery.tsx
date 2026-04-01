@@ -22,6 +22,15 @@ export default function ListingImageGallery({ images, title, rating }: ListingIm
     const goPrev = () => setMainIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
     const goNext = () => setMainIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
 
+    const getTag = (url: string) => {
+        try {
+            const urlObj = new URL(url, typeof window !== "undefined" ? window.location.origin : "");
+            return urlObj.searchParams.get("tag");
+        } catch (e) {
+            return null;
+        }
+    };
+
     const lightboxPrev = () => setLightboxIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
     const lightboxNext = () => setLightboxIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
 
@@ -41,9 +50,16 @@ export default function ListingImageGallery({ images, title, rating }: ListingIm
 
                         {/* Gradient overlay */}
                         <div className="absolute inset-x-0 bottom-0 p-4 md:p-8 bg-gradient-to-t from-black/70 to-transparent">
-                            <div className="flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1 rounded-full border border-primary/30 w-fit mb-1 md:mb-3">
-                                <Star size={12} className="text-primary fill-primary" />
-                                <span className="text-[10px] font-black text-white uppercase">{rating || 4.9} Highly Rated</span>
+                            <div className="flex flex-wrap items-center gap-2 mb-1 md:mb-3">
+                                <div className="flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1 rounded-full border border-primary/30 w-fit">
+                                    <Star size={12} className="text-primary fill-primary" />
+                                    <span className="text-[10px] font-black text-white uppercase">{rating || 4.9} Highly Rated</span>
+                                </div>
+                                {getTag(allImages[mainIndex]) && (
+                                    <div className="bg-secondary/40 backdrop-blur-md px-3 py-1 rounded-full border border-secondary/30 w-fit text-[10px] font-black text-white uppercase">
+                                        {getTag(allImages[mainIndex])}
+                                    </div>
+                                )}
                             </div>
                             <p className="text-white/60 text-[10px] font-bold">
                                 {mainIndex + 1} / {allImages.length}
@@ -72,6 +88,7 @@ export default function ListingImageGallery({ images, title, rating }: ListingIm
                     {/* Thumbnails (up to 3) */}
                     {displayedThumbs.map((img: string, i: number) => {
                         const isLastAndHasMore = i === 2 && extraCount > 0;
+                        const tag = getTag(img);
                         return (
                             <div 
                                 key={i + 1} 
@@ -93,6 +110,12 @@ export default function ListingImageGallery({ images, title, rating }: ListingIm
                                     className="object-cover transition-transform duration-500 md:group-hover:scale-110"
                                 />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                                
+                                {tag && (
+                                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 text-[8px] font-black text-white uppercase transform scale-90 origin-top-left z-10">
+                                        {tag}
+                                    </div>
+                                )}
 
                                 {/* +N overlay on the last thumbnail if there are more images */}
                                 {isLastAndHasMore && (
@@ -164,6 +187,11 @@ export default function ListingImageGallery({ images, title, rating }: ListingIm
                                 unoptimized
                                 className="object-contain"
                             />
+                            {getTag(allImages[lightboxIndex]) && (
+                                <div className="absolute top-4 left-4 bg-primary/80 backdrop-blur-md px-4 py-2 rounded-2xl text-xs font-black text-white uppercase shadow-2xl border border-white/20">
+                                    {getTag(allImages[lightboxIndex])}
+                                </div>
+                            )}
                         </div>
 
                         {allImages.length > 1 && (

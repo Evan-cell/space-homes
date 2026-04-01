@@ -29,16 +29,20 @@ export default function NewListingPage() {
         amenities: [] as string[],
         bedrooms: 1,
         bathrooms: 1,
+        unitsAvailable: 1,
         spaceSize: "",
         phoneNumber: "",
         mapUrl: "",
     });
     const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [imageTags, setImageTags] = useState<string[]>([]);
     const [uploadingImages, setUploadingImages] = useState(false);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            setImageFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+            const newFiles = Array.from(e.target.files);
+            setImageFiles(prev => [...prev, ...newFiles]);
+            setImageTags(prev => [...prev, ...newFiles.map(() => "Exterior")]);
         }
     };
 
@@ -46,7 +50,9 @@ export default function NewListingPage() {
         const urls: string[] = [];
         setUploadingImages(true);
 
-        for (const file of imageFiles) {
+        for (let i = 0; i < imageFiles.length; i++) {
+            const file = imageFiles[i];
+            const tag = imageTags[i] || "Exterior";
             const fileExt = file.name.split('.').pop();
             const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
             const filePath = `listings/${fileName}`;
@@ -64,7 +70,7 @@ export default function NewListingPage() {
                 .from('property-images')
                 .getPublicUrl(filePath);
 
-            urls.push(publicUrl);
+            urls.push(`${publicUrl}?tag=${encodeURIComponent(tag)}`);
         }
 
         setUploadingImages(false);
@@ -252,6 +258,18 @@ export default function NewListingPage() {
                                     </div>
                                 </>
                             )}
+                            
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Units Available</label>
+                                <input 
+                                    type="number" 
+                                    min="1"
+                                    placeholder="e.g. 5"
+                                    className="w-full bg-muted/30 border border-border px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground"
+                                    value={formData.unitsAvailable}
+                                    onChange={(e) => setFormData({...formData, unitsAvailable: parseInt(e.target.value)})}
+                                />
+                            </div>
 
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Space size (sqft)</label>
@@ -353,25 +371,43 @@ export default function NewListingPage() {
                                     disabled={uploadingImages}
                                 />
                             </label>
-                            <div className="grid grid-cols-2 gap-4">
-                                {imageFiles.slice(0, 4).map((file, i) => (
-                                    <div key={i} className="aspect-square bg-muted/40 rounded-3xl border border-border relative overflow-hidden group">
-                                        <img 
-                                            src={URL.createObjectURL(file)} 
-                                            alt="Preview" 
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <button 
-                                            type="button"
-                                            onClick={() => setImageFiles(prev => prev.filter((_, idx) => idx !== i))}
-                                            className="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                {imageFiles.slice(0, 8).map((file, i) => (
+                                    <div key={i} className="flex flex-col gap-2">
+                                        <div className="aspect-square bg-muted/40 rounded-3xl border border-border relative overflow-hidden group">
+                                            <img 
+                                                src={URL.createObjectURL(file)} 
+                                                alt="Preview" 
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    setImageFiles(prev => prev.filter((_, idx) => idx !== i));
+                                                    setImageTags(prev => prev.filter((_, idx) => idx !== i));
+                                                }}
+                                                className="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                        <select 
+                                            value={imageTags[i] || "Exterior"}
+                                            onChange={(e) => {
+                                                const newTags = [...imageTags];
+                                                newTags[i] = e.target.value;
+                                                setImageTags(newTags);
+                                            }}
+                                            className="w-full text-xs font-bold py-2 px-3 rounded-xl bg-card border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20"
                                         >
-                                            <X size={12} />
-                                        </button>
+                                            <option value="Exterior">Exterior</option>
+                                            <option value="Kitchen">Kitchen</option>
+                                            <option value="Sitting Room">Sitting Room</option>
+                                            <option value="Bedroom">Bedroom</option>
+                                            <option value="Bathroom">Bathroom</option>
+                                            <option value="Balcony">Balcony</option>
+                                        </select>
                                     </div>
-                                ))}
-                                {imageFiles.length < 4 && Array.from({ length: 4 - imageFiles.length }).map((_, i) => (
-                                    <div key={i} className="aspect-square bg-muted/10 rounded-3xl border border-dashed border-border/50" />
                                 ))}
                             </div>
                         </div>

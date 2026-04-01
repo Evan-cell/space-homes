@@ -50,6 +50,7 @@ export async function createListing(formData: Record<string, unknown>) {
             images: (formData.images as string[]) || [],
             bedrooms: (formData.bedrooms as number) || 1,
             bathrooms: (formData.bathrooms as number) || 1,
+            units_available: (formData.unitsAvailable as number) || 1,
             space_size: formData.spaceSize ? String(formData.spaceSize) : null,
             phone_number: formData.phoneNumber || null,
             rating: 0,

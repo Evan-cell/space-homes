@@ -131,9 +131,6 @@ export default async function DashboardPage() {
                                     <HouseCard {...house} />
                                     {role === "landlord" && (
                                         <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-100 transition-opacity">
-                                            <button className="p-2 rounded-xl bg-white/90 backdrop-blur-md text-zinc-900 border border-zinc-200 hover:bg-white transition-all shadow-xl">
-                                                <Settings size={16} />
-                                            </button>
                                             <DeleteListingButton id={house.id} />
                                         </div>
                                     )}

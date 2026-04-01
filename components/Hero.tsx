@@ -2,8 +2,33 @@
 
 import { Search, MapPin, House, Banknote, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { getListings } from "@/lib/supabase-actions";
+import { useRouter } from "next/navigation";
 
 export default function Hero() {
+    const [locationQuery, setLocationQuery] = useState("");
+    const [allListings, setAllListings] = useState<any[]>([]);
+    const [filteredLocations, setFilteredLocations] = useState<any[]>([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const router = useRouter();
+
+    useEffect(() => {
+        getListings().then(data => setAllListings(data || []));
+    }, []);
+
+    useEffect(() => {
+        if (locationQuery.trim().length > 0) {
+            const matches = allListings.filter(l => 
+                l.location?.toLowerCase().includes(locationQuery.toLowerCase()) ||
+                l.title?.toLowerCase().includes(locationQuery.toLowerCase())
+            );
+            setFilteredLocations(matches);
+            setShowDropdown(true);
+        } else {
+            setShowDropdown(false);
+        }
+    }, [locationQuery, allListings]);
     return (
         <section className="relative min-h-[90vh] flex items-center justify-center pt-32 pb-20 overflow-hidden bg-background">
             {/* Subtle Gradient BG */}
@@ -38,13 +63,42 @@ export default function Hero() {
                                 {/* Location */}
                                 <div className="flex items-center gap-4 px-6 py-4 rounded-2xl transition-all hover:bg-muted group/input">
                                     <MapPin className="w-6 h-6 text-primary group-hover/input:scale-110 transition-transform" />
-                                    <div className="flex flex-col items-start min-w-0">
+                                    <div className="flex flex-col items-start min-w-0 relative w-full">
                                         <span className="text-[10px] uppercase font-black text-muted-foreground mb-1">Where</span>
                                         <input
                                             type="text"
                                             placeholder="Enter city or area..."
+                                            value={locationQuery}
+                                            onChange={(e) => setLocationQuery(e.target.value)}
+                                            onFocus={() => locationQuery.length > 0 && setShowDropdown(true)}
+                                            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                                             className="bg-transparent border-none outline-none text-foreground font-bold placeholder:text-muted-foreground/50 w-full"
                                         />
+                                        {showDropdown && filteredLocations.length > 0 && (
+                                            <div className="absolute top-full left-0 mt-4 w-full md:w-[320px] bg-card/95 backdrop-blur-xl border border-border rounded-3xl shadow-2xl p-2 z-[100] animate-fade-in">
+                                                {filteredLocations.slice(0, 4).map(item => (
+                                                    <div 
+                                                        key={item.id} 
+                                                        onClick={() => router.push(`/listings/${item.id}`)}
+                                                        className="flex items-center gap-4 p-3 hover:bg-muted/80 rounded-2xl cursor-pointer transition-colors"
+                                                    >
+                                                        <div className="w-12 h-12 rounded-xl bg-muted overflow-hidden relative shrink-0 border border-border/50">
+                                                            <img src={item.images?.[0]?.split('?')[0] || "/placeholder.jpg"} className="w-full h-full object-cover" alt="" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-sm font-black text-foreground truncate">{item.title}</p>
+                                                            <p className="text-[10px] uppercase font-bold text-muted-foreground truncate">{item.location}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                <div 
+                                                    className="w-full text-center p-4 mt-2 border-t border-border/50 text-[10px] font-black uppercase tracking-widest text-primary cursor-pointer hover:bg-primary/5 rounded-2xl transition-colors"
+                                                    onClick={() => router.push(`/listings?search=${encodeURIComponent(locationQuery)}`)}
+                                                >
+                                                    View all in {locationQuery}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -79,10 +133,10 @@ export default function Hero() {
                             </div>
 
                             {/* Action Button */}
-                            <Link href="/sign-in?redirect_url=/listings" className="bg-primary text-primary-foreground px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95 group/btn">
+                            <button onClick={() => router.push(`/listings?search=${encodeURIComponent(locationQuery)}`)} className="bg-primary text-primary-foreground px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-95 group/btn">
                                 <Search className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
                                 <span>Find Rentals</span>
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -1,22 +1,27 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, Suspense } from "react"
 import { useUser, Show } from "@clerk/nextjs"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import HouseCard from "@/components/HouseCard"
 import { PROPERTIES } from "@/lib/data"
 import { getListings } from "@/lib/supabase-actions"
-import { Search, MapPin, House, Banknote, SlidersHorizontal, LayoutGrid, List, Sparkles } from "lucide-react"
+import { Search, MapPin, House, Banknote, SlidersHorizontal, LayoutGrid, List, Sparkles, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 
-export default function ListingsPage() {
+function ListingsContent() {
+    const searchParams = useSearchParams()
     const { user, isLoaded } = useUser()
     const [listings, setListings] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const [searchQuery, setSearchQuery] = useState("")
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "")
     const [propertyType, setPropertyType] = useState("All")
     const [maxPrice, setMaxPrice] = useState(50000)
+    
+    const [currentPage, setCurrentPage] = useState(1)
+    const ITEMS_PER_PAGE = 8;
 
     useEffect(() => {
         async function loadListings() {
@@ -32,6 +37,11 @@ export default function ListingsPage() {
         }
         loadListings()
     }, [])
+
+    useEffect(() => {
+        const query = searchParams.get("search")
+        if (query) setSearchQuery(query)
+    }, [searchParams])
 
     const role = user?.publicMetadata?.role as string | undefined
     const isLandlord = role === "landlord"
@@ -54,6 +64,17 @@ export default function ListingsPage() {
             return matchesSearch && matchesType && matchesPrice
         })
     }, [listings, searchQuery, propertyType, maxPrice])
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredProperties.length / ITEMS_PER_PAGE)
+    const paginatedProperties = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE
+        return filteredProperties.slice(start, start + ITEMS_PER_PAGE)
+    }, [filteredProperties, currentPage])
+
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [searchQuery, propertyType, maxPrice])
 
     return (
         <main className="min-h-screen bg-background transition-colors duration-300">
@@ -162,12 +183,51 @@ export default function ListingsPage() {
                 </div>
 
                 {/* Property Grid */}
-                {filteredProperties.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up">
-                        {filteredProperties.map((property) => (
-                            <HouseCard key={property.id} {...property} />
-                        ))}
-                    </div>
+                {paginatedProperties.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up">
+                            {paginatedProperties.map((property) => (
+                                <HouseCard key={property.id} {...property} />
+                            ))}
+                        </div>
+
+                        {/* Pagination UI */}
+                        {totalPages > 1 && (
+                            <div className="mt-20 flex items-center justify-center gap-4">
+                                <button 
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    className="w-12 h-12 rounded-2xl bg-card border border-border flex items-center justify-center text-foreground disabled:opacity-30 hover:border-primary transition-all active:scale-90"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                                
+                                <div className="flex items-center gap-2">
+                                    {Array.from({ length: totalPages }).map((_, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setCurrentPage(i + 1)}
+                                            className={`w-12 h-12 rounded-2xl font-black text-sm transition-all ${
+                                                currentPage === i + 1 
+                                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110" 
+                                                : "bg-card border border-border text-muted-foreground hover:border-primary/50"
+                                            }`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <button 
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    className="w-12 h-12 rounded-2xl bg-card border border-border flex items-center justify-center text-foreground disabled:opacity-30 hover:border-primary transition-all active:scale-90"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            </div>
+                        )}
+                    </>
                 ) : (
                     <div className="py-32 text-center animate-fade-in">
                         <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
@@ -187,5 +247,18 @@ export default function ListingsPage() {
 
             <Footer />
         </main>
+    )
+}
+
+export default function ListingsPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-sm font-black uppercase tracking-widest text-muted-foreground animate-pulse">Loading Listings...</p>
+            </div>
+        }>
+            <ListingsContent />
+        </Suspense>
     )
 }
